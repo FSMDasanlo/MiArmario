@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedInAs(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function validGarment(data, userId, garmentId) {
+      return data.keys().hasOnly([
+          'category', 'name', 'color', 'brand', 'season', 'style',
+          'description', 'imagePath', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasAll(['category', 'name', 'color', 'season', 'style', 'createdAt', 'updatedAt'])
+        && data.category in ['camisetas', 'camisas', 'pantalones', 'vestidos', 'chaquetas', 'abrigos', 'calzado', 'complementos']
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 80
+        && data.color is string && data.color.size() <= 40
+        && data.season is list && data.season.size() <= 4
+        && data.season.hasOnly(['primavera', 'verano', 'otoño', 'invierno', 'todo el año'])
+        && data.style is list && data.style.size() <= 8
+        && data.style.hasOnly(['casual', 'formal', 'deportivo', 'minimalista', 'clásico', 'urbano'])
+        && (!('brand' in data) || (data.brand is string && data.brand.size() <= 60))
+        && (!('description' in data) || (data.description is string && data.description.size() <= 500))
+        && (!('imagePath' in data) || data.imagePath == 'users/' + userId + '/garments/' + garmentId + '/photo')
+        && data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    function validOutfit(data) {
+      return data.keys().hasOnly([
+          'name', 'garmentIds', 'description', 'occasion', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasAll(['name', 'garmentIds', 'createdAt', 'updatedAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 80
+        && data.garmentIds is list && data.garmentIds.size() > 0 && data.garmentIds.size() <= 20
+        && (!('description' in data) || (data.description is string && data.description.size() <= 500))
+        && (!('occasion' in data) || (data.occasion is string && data.occasion.size() <= 80))
+        && data.createdAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    match /users/{userId}/garments/{garmentId} {
+      allow read: if signedInAs(userId);
+      allow create: if signedInAs(userId) && validGarment(request.resource.data, userId, garmentId);
+      allow update: if signedInAs(userId)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && validGarment(request.resource.data, userId, garmentId);
+      allow delete: if signedInAs(userId);
+    }
+
+    match /users/{userId}/outfits/{outfitId} {
+      allow read: if signedInAs(userId);
+      allow create: if signedInAs(userId) && validOutfit(request.resource.data);
+      allow update: if signedInAs(userId)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && validOutfit(request.resource.data);
+      allow delete: if signedInAs(userId);
+    }
+
+    match /users/{userId}/private/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
