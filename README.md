@@ -30,12 +30,16 @@ o todos sus datos. La búsqueda envía el código al catálogo y está sujeta a 
 límites y disponibilidad. La cámara requiere HTTPS o localhost y permiso del
 navegador; si no está disponible, utiliza la entrada manual.
 
-Con **Crear con foto**, toma o selecciona una imagen JPG, PNG o WebP de hasta
-5 MB. Se solicita confirmación antes de enviar cada foto a Groq, mediante una
-función autenticada que usa `qwen/qwen3.8-27b`. El análisis puede generar
-costes y sus sugerencias pueden ser incorrectas. Evita fotografiar personas o
-información sensible. Si no aceptas el envío, la foto queda seleccionada para
-guardarla normalmente, pero no se analiza.
+Al añadir una prenda, tanto **Crear con foto** como el selector de
+**Fotografía** permiten elegir una imagen JPG, PNG o WebP de hasta 5 MB.
+Se propone ZARA como marca si el campo está vacío; es un valor predeterminado,
+no una identificación de la marca, y puedes cambiarlo. Se solicita confirmación
+antes de enviar cada foto a Groq, mediante una función autenticada que usa
+`qwen/qwen3.8-27b` para sugerir nombre, categoría y color. El análisis puede
+generar costes y sus sugerencias pueden ser incorrectas. Evita fotografiar
+personas o información sensible. Si no aceptas el envío, la foto queda
+seleccionada para guardarla normalmente, pero no se analiza. Al editar una
+prenda, cambiar la foto no inicia un análisis.
 
 Ambos métodos rellenan solo los datos disponibles sin sustituir el texto ya
 introducido. Revisa las sugerencias y completa manualmente los datos que

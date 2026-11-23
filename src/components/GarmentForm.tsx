@@ -122,6 +122,14 @@ export function GarmentForm({ garment, onClose, onSave }: {
     }
   }
 
+  function handlePhotoSelection(selected?: File) {
+    if (!selected || !selectPhoto(selected)) return;
+    if (!garment) {
+      setBrand((current) => current || 'ZARA');
+      void suggestFromPhoto(selected);
+    }
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
@@ -178,7 +186,7 @@ export function GarmentForm({ garment, onClose, onSave }: {
               <input ref={photoInput} className="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(event) => {
                 const selected = event.target.files?.[0];
                 event.target.value = '';
-                if (selected && selectPhoto(selected)) void suggestFromPhoto(selected);
+                handlePhotoSelection(selected);
               }} />
             </div>
             {barcodeOpen && <div className="barcode-panel">
@@ -215,8 +223,8 @@ export function GarmentForm({ garment, onClose, onSave }: {
                 <span className="photo-upload-action"><Upload size={15} />{previewUrl ? 'Cambiar foto' : 'Elegir archivo'}</span>
                 <input type="file" disabled={busy || saving} accept="image/jpeg,image/png,image/webp" onChange={(event) => {
                   const selected = event.target.files?.[0];
-                  if (selected) selectPhoto(selected);
                   event.target.value = '';
+                  handlePhotoSelection(selected);
                 }} />
               </label>
             </div>
