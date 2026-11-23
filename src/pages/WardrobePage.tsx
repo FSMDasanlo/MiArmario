@@ -110,7 +110,7 @@ export function WardrobePage() {
               <span className="garment-category">{categoryLabels[garment.category]}</span>
               <div className="garment-actions"><button onClick={() => startEdit(garment)} aria-label={`Editar ${garment.name}`}><Pencil size={15} /></button><button onClick={() => void remove(garment)} aria-label={`Eliminar ${garment.name}`}><Trash2 size={15} /></button></div>
             </div>
-            <div className="garment-info"><div><h3>{garment.name}</h3><p>{garment.brand || garment.color}</p></div><span className="color-swatch" title={garment.color}><i style={{ backgroundColor: colorSwatch(garment.color) }} />{garment.color}</span></div>
+            <div className="garment-info"><div><h3>{garment.name}</h3><p>{garment.brand || garment.color}</p>{garment.price !== undefined && <p>{garment.price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p>}</div><span className="color-swatch" title={garment.color}><i style={{ backgroundColor: colorSwatch(garment.color) }} />{garment.color}</span></div>
             <div className="garment-tags">{garment.style.slice(0, 3).map((tag) => <span key={tag}>{tag}</span>)}{garment.season.slice(0, 1).map((tag) => <span key={tag} className="season-tag"><Sparkles size={11} />{tag}</span>)}</div>
           </article>)}
         </div>

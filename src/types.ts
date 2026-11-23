@@ -21,6 +21,7 @@ export interface Garment {
   name: string;
   color: string;
   brand?: string;
+  price?: number;
   season: Season[];
   style: ClothingStyle[];
   description?: string;
@@ -35,6 +36,7 @@ export interface GarmentInput {
   name: string;
   color: string;
   brand?: string;
+  price: number;
   season: Season[];
   style: ClothingStyle[];
   description?: string;

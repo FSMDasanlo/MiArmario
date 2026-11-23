@@ -7,13 +7,14 @@ service cloud.firestore {
 
     function validGarment(data, userId, garmentId) {
       return data.keys().hasOnly([
-          'category', 'name', 'color', 'brand', 'season', 'style',
+          'category', 'name', 'color', 'brand', 'price', 'season', 'style',
           'description', 'imagePath', 'createdAt', 'updatedAt'
         ])
-        && data.keys().hasAll(['category', 'name', 'color', 'season', 'style', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(['category', 'name', 'color', 'price', 'season', 'style', 'createdAt', 'updatedAt'])
         && data.category in ['camisetas', 'camisas', 'pantalones', 'vestidos', 'chaquetas', 'abrigos', 'calzado', 'complementos']
         && data.name is string && data.name.size() > 0 && data.name.size() <= 80
         && data.color is string && data.color.size() <= 40
+        && data.price is number && data.price >= 0
         && data.season is list && data.season.size() <= 4
         && data.season.hasOnly(['primavera', 'verano', 'otoño', 'invierno', 'todo el año'])
         && data.style is list && data.style.size() <= 8

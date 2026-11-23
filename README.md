@@ -10,6 +10,14 @@ Authorized domains**, añade `fsmdasanlo.github.io` y, para pruebas locales,
 Si ya existen cuentas con otros proveedores, revisa su acceso antes de
 desactivarlos: este cambio no migra ni vincula esas cuentas.
 
+## Prendas y reglas de Firestore
+
+Cada prenda nueva requiere un precio en euros (puede ser cero). Las prendas
+guardadas antes de introducir el precio siguen visibles; al editarlas se debe
+indicar su precio. Para que el guardado funcione, publica el contenido completo
+de `firestore.rules` en **Firestore Database > Reglas** antes de publicar la
+versión actual de la aplicación.
+
 ## Publicación manual en GitHub Pages
 
 La aplicación se compila con Vite para la ruta `/MiArmario/` y utiliza

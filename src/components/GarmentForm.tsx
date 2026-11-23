@@ -25,6 +25,7 @@ export function GarmentForm({ garment, onClose, onSave }: {
   const [category, setCategory] = useState<GarmentCategory>(garment?.category ?? 'camisetas');
   const [color, setColor] = useState(garment?.color ?? '');
   const [brand, setBrand] = useState(garment?.brand ?? '');
+  const [price, setPrice] = useState(garment?.price?.toString().replace('.', ',') ?? '');
   const [description, setDescription] = useState(garment?.description ?? '');
   const [selectedSeasons, setSelectedSeasons] = useState<Season[]>(garment?.season ?? []);
   const [selectedStyles, setSelectedStyles] = useState<ClothingStyle[]>(garment?.style ?? []);
@@ -52,6 +53,11 @@ export function GarmentForm({ garment, onClose, onSave }: {
       setError('Escribe un nombre y un color para la prenda.');
       return;
     }
+    const parsedPrice = Number(price.replace(',', '.'));
+    if (!/^\d+(?:[.,]\d{1,2})?$/.test(price) || !Number.isFinite(parsedPrice)) {
+      setError('Indica un precio válido en euros con hasta dos decimales.');
+      return;
+    }
     if (photoError) {
       setError(photoError);
       return;
@@ -67,6 +73,7 @@ export function GarmentForm({ garment, onClose, onSave }: {
         category,
         color: color.trim(),
         brand: brand.trim(),
+        price: parsedPrice,
         description: description.trim(),
         season: selectedSeasons,
         style: selectedStyles,
@@ -93,6 +100,7 @@ export function GarmentForm({ garment, onClose, onSave }: {
             <label className="field">Categoría<select value={category} onChange={(event) => setCategory(event.target.value as GarmentCategory)}>{categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             <label className="field">Color<input required maxLength={40} value={color} onChange={(event) => setColor(event.target.value)} placeholder="Ej. Azul marino" /></label>
             <label className="field field-wide">Marca <span className="optional">(opcional)</span><input maxLength={60} value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="¿De dónde viene?" /></label>
+            <label className="field">Precio (€)<input type="text" inputMode="decimal" required pattern="[0-9]+([.,][0-9]{1,2})?" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Ej. 25,50" /></label>
             <fieldset className="field field-wide choice-field">
               <legend>Temporada</legend>
               <div className="choice-pills">{seasons.map((item) => <label key={item} className={`choice-pill ${selectedSeasons.includes(item) ? 'choice-selected' : ''}`}><input type="checkbox" checked={selectedSeasons.includes(item)} onChange={() => toggle(item, selectedSeasons, setSelectedSeasons)} />{item}</label>)}</div>

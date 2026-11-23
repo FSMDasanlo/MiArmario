@@ -71,7 +71,7 @@ export async function saveGarment(
       await storageContext.sdk.deleteObject(storageContext.sdk.ref(storageContext.storage, oldImagePath));
     }
   } else {
-    await sdk.addDoc(collectionRef, { ...payload, createdAt: sdk.serverTimestamp() });
+    await sdk.setDoc(itemRef, { ...payload, createdAt: sdk.serverTimestamp() });
   }
 }
 
