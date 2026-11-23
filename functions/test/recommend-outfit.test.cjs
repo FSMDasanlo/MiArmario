@@ -11,17 +11,23 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.ts'), 'u
 const code = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
 }).outputText;
+const visionSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'garment-vision.ts'), 'utf8');
+const visionCode = ts.transpileModule(visionSource, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
+}).outputText;
+const vision = {};
+new Function('exports', 'require', visionCode)(vision, require);
 const functions = {};
-new Function('exports', 'require', code)(functions, require);
+new Function('exports', 'require', code)(functions, (name) => name === './garment-vision' ? vision : require(name));
 
-test('recommendOutfit responde al preflight sin desactivar la autenticación', async () => {
-  assert.deepEqual(functions.recommendOutfit.__endpoint.region, ['us-central1']);
+for (const name of ['recommendOutfit', 'analyzeGarmentPhoto']) test(`${name} responde al preflight sin desactivar la autenticación`, async () => {
+  assert.deepEqual(functions[name].__endpoint.region, ['us-central1']);
   const app = express();
-  app.use(express.json(), functions.recommendOutfit);
+  app.use(express.json(), functions[name]);
   const server = await new Promise((resolve) => {
     const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
   });
-  const url = `http://127.0.0.1:${server.address().port}/recommendOutfit`;
+  const url = `http://127.0.0.1:${server.address().port}/${name}`;
   const requestedHeaders = 'authorization,content-type,firebase-instance-id-token,x-firebase-appcheck';
 
   try {

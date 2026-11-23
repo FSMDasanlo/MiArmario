@@ -18,6 +18,43 @@ indicar su precio. Para que el guardado funcione, publica el contenido completo
 de `firestore.rules` en **Firestore Database > Reglas** antes de publicar la
 versión actual de la aplicación.
 
+### Añadir mediante código o fotografía
+
+En **Añadir prenda**, pulsa **Código de barras o QR** para usar la cámara o
+introducir el código manualmente. Se consultan códigos EAN/UPC válidos y QR
+GS1 que contengan un GTIN; no se abren las direcciones incluidas en los QR.
+Los datos proceden de [Open Products Facts](https://world.openproductsfacts.org/),
+disponibles bajo la [ODbL](https://opendatacommons.org/licenses/odbl/1.0/).
+Es un catálogo comunitario, no oficial de Inditex, y puede no tener la prenda
+o todos sus datos. La búsqueda envía el código al catálogo y está sujeta a sus
+límites y disponibilidad. La cámara requiere HTTPS o localhost y permiso del
+navegador; si no está disponible, utiliza la entrada manual.
+
+Con **Crear con foto**, toma o selecciona una imagen JPG, PNG o WebP de hasta
+5 MB. Se solicita confirmación antes de enviar cada foto a Groq, mediante una
+función autenticada que usa `qwen/qwen3.8-27b`. El análisis puede generar
+costes y sus sugerencias pueden ser incorrectas. Evita fotografiar personas o
+información sensible. Si no aceptas el envío, la foto queda seleccionada para
+guardarla normalmente, pero no se analiza.
+
+Ambos métodos rellenan solo los datos disponibles sin sustituir el texto ya
+introducido. Revisa las sugerencias y completa manualmente los datos que
+falten, incluidos precio, temporada y estilo; no se guarda nada hasta pulsar
+**Añadir al armario**.
+
+Para activar el análisis, configura el secreto `GROQ_API_KEY` en Firebase si
+aún no existe. Compila desde `functions` con `npm run build` y, desde la raíz,
+despliega únicamente la nueva función:
+
+```sh
+firebase deploy --only functions:analyzeGarmentPhoto --project miarmario-15bf6
+```
+
+La función se despliega en `us-central1`, requiere inicio de sesión y tiene
+un límite independiente de ocho solicitudes por usuario y minuto. Después,
+publica la nueva versión de la web siguiendo los pasos de GitHub Pages de
+abajo. Ninguno de estos pasos se ejecuta automáticamente al modificar el código.
+
 ## Asistente y Cloud Function
 
 `recommendOutfit` es una función callable de Firebase de segunda generación,

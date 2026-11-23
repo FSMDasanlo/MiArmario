@@ -4,6 +4,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import Groq from 'groq-sdk';
 import { z } from 'zod';
+import { parseSuggestion, validateImage } from './garment-vision';
 
 initializeApp();
 const firestore = getFirestore();
@@ -26,8 +27,8 @@ interface WardrobeItem {
   style: string[];
 }
 
-async function enforceRateLimit(userId: string): Promise<void> {
-  const usageRef = firestore.doc(`users/${userId}/private/aiUsage`);
+async function enforceRateLimit(userId: string, usage = 'aiUsage'): Promise<void> {
+  const usageRef = firestore.doc(`users/${userId}/private/${usage}`);
   const now = Date.now();
   await firestore.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(usageRef);
@@ -139,6 +140,55 @@ export const recommendOutfit = onCall(
       if (error instanceof HttpsError) throw error;
       console.error('Groq request failed', error);
       throw new HttpsError('unavailable', 'No se pudo conectar con el asistente. Inténtalo más tarde.');
+    }
+  },
+);
+
+export const analyzeGarmentPhoto = onCall(
+  {
+    region: 'us-central1',
+    cors: ['https://fsmdasanlo.github.io', 'http://localhost:5173'],
+    secrets: [groqApiKey],
+    timeoutSeconds: 60,
+    memory: '256MiB',
+    maxInstances: 5,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Inicia sesión para analizar la fotografía.');
+    }
+    const dataUrl = validateImage(request.data);
+    await enforceRateLimit(request.auth.uid, 'garmentVisionUsage');
+
+    try {
+      const groq = new Groq({ apiKey: groqApiKey.value() });
+      const completion = await groq.chat.completions.create({
+        model: 'qwen/qwen3.8-27b',
+        temperature: 0.2,
+        reasoning_effort: 'none',
+        max_completion_tokens: 300,
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content: 'Analiza la prenda de la fotografía. Devuelve únicamente JSON con name, category y color. Usa español para name y color. category debe ser uno de camisetas, camisas, pantalones, vestidos, chaquetas, abrigos, calzado, complementos. Si una propiedad no se puede identificar con seguridad, usa null. No inventes marca, precio ni detalles no visibles. Si no hay una prenda identificable, devuelve null en las tres propiedades.',
+          },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'Describe la prenda visible para completar una ficha editable.' },
+              { type: 'image_url', image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      });
+      const content = completion.choices[0]?.message.content;
+      if (!content) throw new HttpsError('internal', 'El análisis no devolvió una respuesta.');
+      return parseSuggestion(content);
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('Groq garment vision request failed');
+      throw new HttpsError('unavailable', 'No se pudo analizar la fotografía. Inténtalo más tarde.');
     }
   },
 );

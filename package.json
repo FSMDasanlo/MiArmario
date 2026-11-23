@@ -10,6 +10,7 @@
     "typecheck": "tsc -b --pretty"
   },
   "dependencies": {
+    "@zxing/browser": "^0.2.1",
     "firebase": "^12.9.0",
     "lucide-react": "^0.468.0",
     "react": "^19.1.0",
