@@ -74,7 +74,14 @@ function parseModelResponse(content: string, availableIds: Set<string>) {
 }
 
 export const recommendOutfit = onCall(
-  { secrets: [groqApiKey], timeoutSeconds: 60, memory: '256MiB', maxInstances: 10 },
+  {
+    region: 'us-central1',
+    cors: ['https://fsmdasanlo.github.io', 'http://localhost:5173'],
+    secrets: [groqApiKey],
+    timeoutSeconds: 60,
+    memory: '256MiB',
+    maxInstances: 10,
+  },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Inicia sesión para consultar tu armario.');

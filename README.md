@@ -18,6 +18,33 @@ indicar su precio. Para que el guardado funcione, publica el contenido completo
 de `firestore.rules` en **Firestore Database > Reglas** antes de publicar la
 versión actual de la aplicación.
 
+## Asistente y Cloud Function
+
+`recommendOutfit` es una función callable de Firebase de segunda generación,
+en `us-central1`. Permite las llamadas desde `https://fsmdasanlo.github.io` y
+`http://localhost:5173`; Firebase gestiona el preflight y la autenticación
+sigue siendo obligatoria.
+
+Para desplegar únicamente esta función, compila primero desde `functions`
+con `npm run build` y después, desde la raíz del proyecto, ejecuta:
+
+```sh
+firebase deploy --only functions:recommendOutfit --project miarmario-15bf6
+```
+
+La función necesita el secreto `GROQ_API_KEY` configurado en Firebase.
+Después del despliegue, comprueba el preflight desde PowerShell:
+
+```powershell
+curl.exe -i -X OPTIONS 'https://us-central1-miarmario-15bf6.cloudfunctions.net/recommendOutfit' -H 'Origin: https://fsmdasanlo.github.io' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: authorization,content-type'
+```
+
+La respuesta debe ser `204` e incluir `Access-Control-Allow-Origin` con el
+origen solicitado, `Access-Control-Allow-Methods: POST` y los encabezados
+solicitados en `Access-Control-Allow-Headers`. Repite la comprobación con el
+origen `http://localhost:5173`. Si aparece `404`, comprueba el proyecto, la
+región y el despliegue de la función.
+
 ## Publicación manual en GitHub Pages
 
 La aplicación se compila con Vite para la ruta `/MiArmario/` y utiliza

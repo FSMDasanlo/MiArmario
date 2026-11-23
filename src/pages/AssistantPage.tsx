@@ -9,9 +9,9 @@ import { listGarments } from '../services/garments';
 import type { Garment } from '../types';
 
 const promptIdeas = [
-  '¿Qué me pongo para una cena informal?',
-  'Ayúdame a sacar partido a prendas que combino poco',
-  'Propón algo cómodo para un día de otoño',
+  { label: 'Cena informal', question: '¿Qué me pongo para una cena informal?' },
+  { label: 'Prendas que combino poco', question: 'Ayúdame a sacar partido a prendas que combino poco' },
+  { label: 'Día de otoño', question: 'Propón algo cómodo para un día de otoño' },
 ];
 
 export function AssistantPage() {
@@ -54,16 +54,18 @@ export function AssistantPage() {
 
   return (
     <div className="assistant-page">
-      <PageHeading eyebrow="UNA AYUDA CON MUCHO ESTILO" title="Tu estilista personal" description="Ideas hechas con las prendas que ya viven en tu armario." />
+      <PageHeading title="Tu estilista personal" />
       <div className="assistant-layout">
         <section className="assistant-main">
-          <div className="assistant-intro">
-            <div className="assistant-avatar"><Sparkles size={22} /></div>
-            <div><span className="assistant-status"><i /> ESTILISTA IA</span><h2>Hola, ¿qué tienes en mente?</h2><p>Cuéntame tus planes. Buscaré opciones entre tus prendas guardadas, sin inventar ninguna.</p></div>
-          </div>
           {garmentCount === 0 && user && <Notice tone="info">Tu armario todavía está vacío. <Link to="/armario">Añade algunas prendas</Link> para recibir sugerencias personalizadas.</Notice>}
           {!firebaseConfigured && <Notice tone="info">Conecta Firebase para consultar tus prendas. La IA se activa cuando configures también la función segura de Groq.</Notice>}
           {error && <Notice>{error}</Notice>}
+          <form className="assistant-composer" onSubmit={submit}>
+            <label htmlFor="assistant-question">Tu pregunta</label>
+            <textarea id="assistant-question" rows={3} maxLength={500} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="¿Qué ocasión tienes? ¿Cómo te gustaría sentirte?" />
+            <div className="composer-bottom"><span>La IA solo considera prendas de tu armario.</span><button aria-label="Enviar consulta" disabled={loading || !user || !firebaseConfigured || !question.trim()}>{loading ? <span className="button-spinner" /> : <ArrowUp size={19} />}</button></div>
+          </form>
+          <div className="prompt-suggestions"><span>Prueba a preguntar:</span>{promptIdeas.map((idea) => <button key={idea.label} onClick={() => setQuestion(idea.question)}>{idea.label}<ArrowUp size={13} /></button>)}</div>
           {response && <section className="assistant-response" aria-live="polite">
             <div className="response-heading"><span className="response-bot"><Bot size={17} /></span><span>MIARMARIO <small>AHORA</small></span></div>
             <p className="response-answer">{response.answer}</p>
@@ -76,16 +78,10 @@ export function AssistantPage() {
               </article>;
             })}
           </section>}
-          <div className="prompt-suggestions"><span>PRUEBA A PREGUNTAR</span>{promptIdeas.map((idea) => <button key={idea} onClick={() => setQuestion(idea)}>{idea}<ArrowUp size={13} /></button>)}</div>
-          <form className="assistant-composer" onSubmit={submit}>
-            <label htmlFor="assistant-question">Tu pregunta</label>
-            <textarea id="assistant-question" rows={3} maxLength={500} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="¿Qué ocasión tienes? ¿Cómo te gustaría sentirte?" />
-            <div className="composer-bottom"><span>La IA solo considera prendas de tu armario.</span><button aria-label="Enviar consulta" disabled={loading || !user || !firebaseConfigured || !question.trim()}>{loading ? <span className="button-spinner" /> : <ArrowUp size={19} />}</button></div>
-          </form>
         </section>
         <aside className="assistant-sidebar">
-          <div className="assistant-context-card"><div className="context-icon"><Shirt size={19} /></div><span className="eyebrow">TU ARMARIO</span><strong>{garmentCount === undefined ? 'Aún no disponible' : `${garmentCount} ${garmentCount === 1 ? 'prenda' : 'prendas'}`}</strong><p>La recomendación se crea solo con lo que ya tienes.</p><Link to="/armario">Ver mis prendas <span>→</span></Link></div>
-          <div className="context-fields"><div className="context-fields-title"><CircleHelp size={16} /><strong>Afina tu idea</strong></div><label>Ocasión<input value={occasion} onChange={(event) => setOccasion(event.target.value)} placeholder="Ej. Una comida con amigas" maxLength={80} /></label><label>Clima<input value={weather} onChange={(event) => setWeather(event.target.value)} placeholder="Ej. 18 °C y algo de viento" maxLength={80} /></label><label>Temporada<select value={season} onChange={(event) => setSeason(event.target.value)}><option value="">Cualquiera</option><option>primavera</option><option>verano</option><option>otoño</option><option>invierno</option></select></label><label>Estilo que te apetece<select value={style} onChange={(event) => setStyle(event.target.value)}><option value="">Sorpréndeme</option><option>casual</option><option>formal</option><option>deportivo</option><option>minimalista</option><option>clásico</option><option>urbano</option></select></label></div>
+          <div className="assistant-context-card"><strong>{garmentCount === undefined ? 'Armario no disponible' : `${garmentCount} ${garmentCount === 1 ? 'prenda' : 'prendas'}`}</strong><Link to="/armario">Ver armario →</Link></div>
+          <div className="context-fields"><div className="context-fields-title"><CircleHelp size={16} /><strong>Afina tu idea</strong></div><label>Ocasión<input value={occasion} onChange={(event) => setOccasion(event.target.value)} placeholder="Ej. Comida" maxLength={80} /></label><label>Clima<input value={weather} onChange={(event) => setWeather(event.target.value)} placeholder="Ej. 18 °C" maxLength={80} /></label><label>Temporada<select value={season} onChange={(event) => setSeason(event.target.value)}><option value="">Cualquiera</option><option>primavera</option><option>verano</option><option>otoño</option><option>invierno</option></select></label><label>Estilo que te apetece<select value={style} onChange={(event) => setStyle(event.target.value)}><option value="">Sorpréndeme</option><option>casual</option><option>formal</option><option>deportivo</option><option>minimalista</option><option>clásico</option><option>urbano</option></select></label></div>
           <p className="assistant-privacy"><Sparkles size={14} /> Tus prendas son privadas. La consulta se procesa en el servidor.</p>
         </aside>
       </div>

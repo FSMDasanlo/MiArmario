@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Search, SlidersHorizontal, Shirt, Pencil, Trash2, Plus, ImageOff, Sparkles } from 'lucide-react';
+import { Search, SlidersHorizontal, Shirt, Pencil, Trash2, ImageOff, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EmptyState, MobileAddButton, Notice, PageHeading, PrimaryButton } from '../components/AppShell';
 import { GarmentForm } from '../components/GarmentForm';
@@ -95,7 +95,7 @@ export function WardrobePage() {
 
   return (
     <div className="wardrobe-page">
-      <PageHeading eyebrow="LAS PIEZAS QUE TE REPRESENTAN" title="Mi armario" description={garments.length ? `${garments.length} ${garments.length === 1 ? 'prenda guardada' : 'prendas guardadas'} para crear a tu manera.` : 'Tus prendas favoritas, listas para nuevas combinaciones.'} action={<PrimaryButton onClick={() => startEdit()} disabled={!user}><Plus size={18} /> Añadir prenda</PrimaryButton>} />
+      <PageHeading title="Mi armario" action={<PrimaryButton onClick={() => startEdit()} disabled={!user}>Añadir prenda</PrimaryButton>} />
       {error && <Notice>{error}</Notice>}
       <div className="wardrobe-toolbar">
         <label className="search-box"><Search size={18} /><input ref={searchInput} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Busca por nombre, color o estilo…" aria-label="Buscar prendas" aria-keyshortcuts="Control+K Meta+K" /><kbd>Ctrl K</kbd></label>
@@ -119,7 +119,7 @@ export function WardrobePage() {
           icon={<Shirt size={25} />}
           title={search || category !== 'todas' ? 'No encontramos prendas' : 'Tu armario empieza aquí'}
           body={search || category !== 'todas' ? 'Prueba con otro término o categoría.' : 'Añade tus prendas y tendrás todo listo para combinar, consultar y volver a descubrir.'}
-          action={!search && category === 'todas' ? <PrimaryButton onClick={() => startEdit()} disabled={!user}><Plus size={17} /> Añadir primera prenda</PrimaryButton> : undefined}
+          action={!search && category === 'todas' ? <PrimaryButton onClick={() => startEdit()} disabled={!user}>Añadir primera prenda</PrimaryButton> : undefined}
         />
       )}
       {!firebaseConfigured && <div className="inline-hint">Conecta Firebase para guardar prendas y fotografías en tu cuenta. <Link to="/acceso">Ver cómo configurarlo</Link></div>}

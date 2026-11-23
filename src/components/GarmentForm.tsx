@@ -96,10 +96,10 @@ export function GarmentForm({ garment, onClose, onSave }: {
         </div>
         <form onSubmit={submit} className="garment-form">
           <div className="form-grid">
-            <label className="field field-wide">Nombre de la prenda<input required maxLength={80} value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej. Camiseta de lino" /></label>
+            <label className="field">Nombre de la prenda<input required maxLength={80} value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej. Camiseta de lino" /></label>
             <label className="field">Categoría<select value={category} onChange={(event) => setCategory(event.target.value as GarmentCategory)}>{categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             <label className="field">Color<input required maxLength={40} value={color} onChange={(event) => setColor(event.target.value)} placeholder="Ej. Azul marino" /></label>
-            <label className="field field-wide">Marca <span className="optional">(opcional)</span><input maxLength={60} value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="¿De dónde viene?" /></label>
+            <label className="field"><span>Marca <span className="optional">(opcional)</span></span><input maxLength={60} value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="¿De dónde viene?" /></label>
             <label className="field">Precio (€)<input type="text" inputMode="decimal" required pattern="[0-9]+([.,][0-9]{1,2})?" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Ej. 25,50" /></label>
             <fieldset className="field field-wide choice-field">
               <legend>Temporada</legend>
@@ -109,7 +109,7 @@ export function GarmentForm({ garment, onClose, onSave }: {
               <legend>Estilo</legend>
               <div className="choice-pills">{styles.map((item) => <label key={item} className={`choice-pill ${selectedStyles.includes(item) ? 'choice-selected' : ''}`}><input type="checkbox" checked={selectedStyles.includes(item)} onChange={() => toggle(item, selectedStyles, setSelectedStyles)} />{item}</label>)}</div>
             </fieldset>
-            <label className="field field-wide">Notas <span className="optional">(opcional)</span><textarea rows={2} maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Un detalle que quieras recordar…" /></label>
+            <label className="field field-wide"><span>Notas <span className="optional">(opcional)</span></span><textarea rows={2} maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Un detalle que quieras recordar…" /></label>
             <div className="field field-wide"><span className="field-label">Fotografía <span className="optional">(JPG, PNG o WebP · máx. 5 MB)</span></span>
               <label className="photo-upload">
                 {previewUrl ? <img src={previewUrl} alt="Vista previa de la prenda" /> : <span className="photo-placeholder"><ImagePlus size={23} /><span>Añadir fotografía</span></span>}

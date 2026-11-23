@@ -3,7 +3,6 @@ import { signOut } from 'firebase/auth';
 import {
   CalendarDays,
   ChevronDown,
-  CircleHelp,
   Layers3,
   LogOut,
   Menu,
@@ -61,10 +60,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="sidebar-tip">
-            <div className="tip-icon"><CircleHelp size={17} /></div>
-            <div><strong>Un armario con intención</strong><span>Menos dudas, más estilo.</span></div>
-          </div>
           {user ? (
             <button className="account-row" onClick={handleSignOut}>
               <span className="avatar">{(user.displayName || user.email || 'M').slice(0, 1).toUpperCase()}</span>
@@ -86,7 +81,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="main-column">
         <header className="topbar">
           <button className="icon-button menu-toggle" onClick={() => setMenuOpen(true)} aria-label="Abrir menú"><Menu size={21} /></button>
-          <div className="topbar-crumb">Mi espacio <span>/</span> <strong>Viste a tu manera</strong></div>
+          <div className="topbar-crumb"><strong>MiArmario</strong></div>
           <div className="topbar-actions">
             <span className="topbar-greeting">Hola{user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}</span>
             <button className="topbar-avatar" onClick={() => user ? void handleSignOut() : navigate('/acceso')} aria-label={user ? 'Cerrar sesión' : 'Iniciar sesión'}>
