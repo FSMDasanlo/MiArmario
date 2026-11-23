@@ -297,13 +297,8 @@ h1, h2, h3, p { margin-top: 0; }
 .login-icon { display: grid; width: 42px; height: 42px; margin-bottom: 18px; place-items: center; border-radius: 11px; background: #f4ebee; color: var(--magenta); }
 .login-card h1 { margin: 8px 0 7px; color: var(--navy); font-family: var(--heading); font-size: 25px; letter-spacing: -.9px; }
 .login-card > p { margin: 0 0 19px; color: #858a91; font-size: 11px; line-height: 1.6; }
-.login-form { display: grid; gap: 14px; }
-.input-icon { position: relative; display: flex; align-items: center; color: #9c9fa3; }
-.input-icon > svg { position: absolute; left: 10px; }
-.input-icon input { padding-left: 34px; }
 .login-submit { width: 100%; margin-top: 5px; }
 .login-submit svg { margin-left: auto; }
-.login-switch { width: 100%; margin-top: 16px; padding: 8px 0 0; border: 0; background: transparent; color: var(--magenta-dark); font-size: 10px; font-weight: 600; }
 .firebase-steps .notice { font-size: 10px; }
 .firebase-steps ol { display: grid; gap: 10px; margin: 17px 0; padding-left: 19px; color: #5f6570; font-size: 10px; line-height: 1.55; }
 .firebase-steps li::marker { color: #a68d4e; font-weight: 700; }

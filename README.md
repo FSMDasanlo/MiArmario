@@ -1,6 +1,15 @@
 # MiArmario
 Control de prendas
 
+## Inicio de sesión
+
+En Firebase Authentication, activa el proveedor **Google** y desactiva los
+demás proveedores si solo quieres permitir este método. En **Settings >
+Authorized domains**, añade `fsmdasanlo.github.io` y, para pruebas locales,
+`localhost` si aún no aparecen. El navegador debe permitir ventanas emergentes.
+Si ya existen cuentas con otros proveedores, revisa su acceso antes de
+desactivarlos: este cambio no migra ni vincula esas cuentas.
+
 ## Publicación manual en GitHub Pages
 
 La aplicación se compila con Vite para la ruta `/MiArmario/` y utiliza
