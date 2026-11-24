@@ -9,6 +9,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage').then((module) =
 const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })));
 const OutfitsPage = lazy(() => import('./pages/OutfitsPage').then((module) => ({ default: module.OutfitsPage })));
 const WardrobePage = lazy(() => import('./pages/WardrobePage').then((module) => ({ default: module.WardrobePage })));
+const VirtualTryOnPage = lazy(() => import('./pages/VirtualTryOnPage').then((module) => ({ default: module.VirtualTryOnPage })));
 
 function PrivatePage({ children }: { children: ReactNode }) {
   return <ProtectedRoute><AppShell><Suspense fallback={<div className="loading-panel">Abriendo tu armario…</div>}>{children}</Suspense></AppShell></ProtectedRoute>;
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/armario" element={<PrivatePage><WardrobePage /></PrivatePage>} />
           <Route path="/conjuntos" element={<PrivatePage><OutfitsPage /></PrivatePage>} />
           <Route path="/asistente" element={<PrivatePage><AssistantPage /></PrivatePage>} />
+          <Route path="/vestuario-virtual" element={<PrivatePage><VirtualTryOnPage /></PrivatePage>} />
           <Route path="*" element={<PrivatePage><DashboardPage /></PrivatePage>} />
         </Routes>
       </AuthProvider>

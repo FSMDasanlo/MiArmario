@@ -10,6 +10,7 @@ import {
   Plus,
   Shirt,
   Sparkles,
+  UserRound,
   X,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
@@ -22,6 +23,7 @@ const navigation = [
   { to: '/armario', label: 'Mi armario', icon: Shirt },
   { to: '/conjuntos', label: 'Conjuntos', icon: CalendarDays },
   { to: '/asistente', label: 'Estilista IA', icon: Sparkles },
+  { to: '/vestuario-virtual', label: 'Vestuario Virtual', icon: UserRound },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -104,7 +106,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {navigation.map(({ to, label, icon: Icon, end }) => (
           <NavLink key={to} to={to} end={end} aria-label={label} className={({ isActive }) => `mobile-nav-link ${isActive ? 'mobile-nav-active' : ''}`}>
             <Icon size={20} />
-            <span>{label === 'Estilista IA' ? 'Estilista' : label}</span>
+            <span>{label === 'Estilista IA' ? 'Estilista' : label === 'Vestuario Virtual' ? 'Vestuario' : label}</span>
           </NavLink>
         ))}
         <button className="mobile-nav-link" onClick={() => setMenuOpen(true)} aria-label="Más opciones"><Menu size={20} /><span>Más</span></button>

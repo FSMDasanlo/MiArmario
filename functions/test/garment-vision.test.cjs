@@ -57,6 +57,7 @@ test('la callable exige autenticación, limita por separado y envía la imagen a
     'firebase-functions/v2/https': { HttpsError: https.HttpsError, onCall: (options, handler) => ({ options, handler }) },
     'groq-sdk': GroqMock,
     './garment-vision': vision,
+    './virtual-try-on': {},
   };
   const functions = {};
   new Function('exports', 'require', transpile('index.ts'))(functions, (name) => modules[name] ?? require(name));

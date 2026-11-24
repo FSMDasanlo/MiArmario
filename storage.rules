@@ -10,5 +10,12 @@ service firebase.storage {
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
+
+    match /users/{userId}/virtualTryOn/{fileName} {
+      allow read, delete: if request.auth != null
+        && request.auth.uid == userId
+        && fileName in ['photo', 'result'];
+      allow write: if false;
+    }
   }
 }

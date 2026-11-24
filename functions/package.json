@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@google/genai": "^1.52.0",
     "firebase-admin": "^14.5.1",
     "firebase-functions": "^7.4.0",
     "groq-sdk": "^0.25.0",

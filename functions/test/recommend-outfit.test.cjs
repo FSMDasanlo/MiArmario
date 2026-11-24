@@ -18,7 +18,7 @@ const visionCode = ts.transpileModule(visionSource, {
 const vision = {};
 new Function('exports', 'require', visionCode)(vision, require);
 const functions = {};
-new Function('exports', 'require', code)(functions, (name) => name === './garment-vision' ? vision : require(name));
+new Function('exports', 'require', code)(functions, (name) => name === './garment-vision' ? vision : name === './virtual-try-on' ? {} : require(name));
 
 for (const name of ['recommendOutfit', 'analyzeGarmentPhoto']) test(`${name} responde al preflight sin desactivar la autenticación`, async () => {
   assert.deepEqual(functions[name].__endpoint.region, ['us-central1']);

@@ -6,6 +6,8 @@ import Groq from 'groq-sdk';
 import { z } from 'zod';
 import { parseSuggestion, validateImage } from './garment-vision';
 
+export { saveVirtualTryOnPhoto, generateVirtualTryOn } from './virtual-try-on';
+
 initializeApp();
 const firestore = getFirestore();
 const groqApiKey = defineSecret('GROQ_API_KEY');

@@ -86,6 +86,70 @@ solicitados en `Access-Control-Allow-Headers`. Repite la comprobación con el
 origen `http://localhost:5173`. Si aparece `404`, comprueba el proyecto, la
 región y el despliegue de la función.
 
+## Vestuario Virtual
+
+La sección permite guardar una fotografía personal de cuerpo entero, elegir una
+prenda con foto y solicitar una simulación orientativa. Antes de cada solicitud
+hay que aceptar expresamente el envío de ambas fotografías a Google Vertex AI.
+El modelo `gemini-nano-banana-2.1` usa el endpoint global: no se garantiza que
+el procesamiento tenga lugar en España ni en la UE. Cada intento puede generar
+costes y el resultado no garantiza la talla ni el ajuste real.
+
+La foto y el último resultado se guardan en rutas privadas de Storage por UID.
+Se sustituyen al guardar una nueva foto o generar correctamente un nuevo
+resultado, y pueden eliminarse desde la sección. Las funciones los escriben
+mediante el SDK administrativo sin crear enlaces de descarga; el navegador usa
+lecturas autenticadas. No se guardan imágenes en Firestore. Las reglas locales
+de Storage deben desplegarse para habilitar estas lecturas y eliminaciones;
+Firestore no necesita nuevas reglas. Las prendas siguen usando sus mecanismos
+existentes.
+
+Para una primera prueba real, tras revisar y autorizar expresamente costes y
+tratamiento de imágenes:
+
+1. Comprueba la facturación y habilita la API Vertex AI (`aiplatform.googleapis.com`)
+   en el proyecto `miarmario-15bf6`. Verifica el acceso al modelo. En Cloud Run,
+   comprueba la cuenta de servicio de las funciones y concédele el rol
+   **Vertex AI User** (`roles/aiplatform.user`) y acceso adecuado a Firestore y
+   al bucket. No se necesita una clave API de Gemini.
+2. Identifica el bucket en Firebase > Storage y consulta su CORS actual con
+   `gcloud storage buckets describe gs://NOMBRE_DEL_BUCKET --format="json(cors)"`.
+   Si las lecturas autenticadas fallan por CORS, crea un archivo JSON local que
+   conserve todas las entradas existentes y añada esta entrada:
+
+   ```json
+   {
+     "origin": ["https://fsmdasanlo.github.io", "http://localhost:5173"],
+     "method": ["GET", "DELETE"],
+     "responseHeader": ["Authorization", "Content-Type", "X-Firebase-Storage-Version", "X-Firebase-AppCheck"],
+     "maxAgeSeconds": 3600
+   }
+   ```
+
+   El archivo debe contener un **array** de entradas CORS. Después aplica el
+   array completo con `gcloud storage buckets update gs://NOMBRE_DEL_BUCKET
+   --cors-file=cors-vestuario.json`. El comando sustituye la configuración
+   anterior: no lo ejecutes sin conservarla. Verifica los encabezados concretos
+   en el navegador; consulta la
+   [documentación de Firebase](https://firebase.google.com/docs/storage/web/download-files#cors_configuration).
+3. En PowerShell, desde la raíz, compila y despliega:
+
+   ```powershell
+   npm run build --prefix functions
+   npm run build
+   firebase deploy --only storage,functions:saveVirtualTryOnPhoto,functions:generateVirtualTryOn --project miarmario-15bf6
+   ```
+
+   Después publica la web siguiendo el procedimiento de GitHub Pages de abajo.
+   Estos pasos no se realizan automáticamente.
+4. Inicia sesión, sube una foto personal, selecciona una prenda con foto, lee y
+   acepta el consentimiento y pulsa **Probar cómo me queda** una sola vez.
+
+La función se ejecuta en `us-central1` y llama al modelo con ubicación `global`.
+El SDK no reintenta automáticamente la solicitud al modelo; una nueva pulsación
+es un nuevo intento potencialmente facturable. La aplicación conserva únicamente
+el último resultado y muestra un error si no recibe exactamente una imagen.
+
 ## Publicación manual en GitHub Pages
 
 La aplicación se compila con Vite para la ruta `/MiArmario/` y utiliza
