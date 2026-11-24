@@ -42,8 +42,23 @@ export function GarmentForm({ garment, onClose, onSave }: {
   const [barcode, setBarcode] = useState('');
   const [busy, setBusy] = useState(false);
   const [suggestionMessage, setSuggestionMessage] = useState('');
+  const [suggestedFields, setSuggestedFields] = useState<string[]>([]);
   const photoInput = useRef<HTMLInputElement>(null);
   const categoryEdited = useRef(Boolean(garment));
+  const values = useRef({ name: garment?.name ?? '', color: garment?.color ?? '', brand: garment?.brand ?? '', category: garment?.category ?? 'camisetas' });
+
+  function setImportedText(field: 'name' | 'color' | 'brand', value: string) {
+    if (values.current[field]) return;
+    values.current[field] = value;
+    if (field === 'name') setName(value);
+    if (field === 'color') setColor(value);
+    if (field === 'brand') setBrand(value);
+    setSuggestedFields((current) => [...new Set([...current, field])]);
+  }
+
+  function clearSuggestion(field: string) {
+    setSuggestedFields((current) => current.filter((item) => item !== field));
+  }
 
   useEffect(() => {
     if (!photo) return;
@@ -82,8 +97,8 @@ export function GarmentForm({ garment, onClose, onSave }: {
         setSuggestionMessage('No encontramos este producto en Open Products Facts. Completa la ficha manualmente.');
       } else {
         const { name: foundName, brand: foundBrand } = product;
-        if (foundName) setName((current) => current || foundName);
-        if (foundBrand) setBrand((current) => current || foundBrand);
+        if (foundName) setImportedText('name', foundName);
+        if (foundBrand) setImportedText('brand', foundBrand);
         setSuggestionMessage(product.name || product.brand
           ? 'Datos encontrados. Revísalos y completa los campos restantes, incluido el precio.'
           : 'El producto no tiene nombre ni marca disponibles. Completa la ficha manualmente.');
@@ -106,9 +121,13 @@ export function GarmentForm({ garment, onClose, onSave }: {
     try {
       const suggestion = await analyzeGarmentPhoto(selected);
       const { name: suggestedName, color: suggestedColor } = suggestion;
-      if (suggestedName) setName((current) => current || suggestedName);
-      if (suggestedColor) setColor((current) => current || suggestedColor);
+      if (suggestedName) setImportedText('name', suggestedName);
+      if (suggestedColor) setImportedText('color', suggestedColor);
       if (suggestion.category && !categoryEdited.current) {
+        if (suggestion.category !== values.current.category) {
+          setSuggestedFields((current) => [...new Set([...current, 'category'])]);
+        }
+        values.current.category = suggestion.category;
         setCategory(suggestion.category);
         categoryEdited.current = true;
       }
@@ -125,7 +144,7 @@ export function GarmentForm({ garment, onClose, onSave }: {
   function handlePhotoSelection(selected?: File) {
     if (!selected || !selectPhoto(selected)) return;
     if (!garment) {
-      setBrand((current) => current || 'ZARA');
+      setImportedText('brand', 'ZARA');
       void suggestFromPhoto(selected);
     }
   }
@@ -181,7 +200,7 @@ export function GarmentForm({ garment, onClose, onSave }: {
         <form onSubmit={submit} className="garment-form">
           {!garment && <>
             <div className="garment-import-actions">
-              <button type="button" className="button-secondary" disabled={busy || saving} onClick={() => { setBarcodeOpen((open) => !open); setCameraOpen(false); }}><ScanBarcode size={18} /> Código de barras o QR</button>
+              <button type="button" className="button-secondary" disabled={busy || saving} onClick={() => { setBarcodeOpen((open) => !open); setCameraOpen(false); }}><ScanBarcode size={18} /> Código de barras o QR (pendiente de desarrollo)</button>
               <button type="button" className="button-secondary" disabled={busy || saving} onClick={() => photoInput.current?.click()}><Camera size={18} /> Crear con foto</button>
               <input ref={photoInput} className="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(event) => {
                 const selected = event.target.files?.[0];
@@ -203,10 +222,10 @@ export function GarmentForm({ garment, onClose, onSave }: {
             {suggestionMessage && <p className="import-message" role="status">{suggestionMessage}</p>}
           </>}
           <div className="form-grid">
-            <label className="field">Nombre de la prenda<input required maxLength={80} value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej. Camiseta de lino" /></label>
-            <label className="field">Categoría<select value={category} onChange={(event) => { categoryEdited.current = true; setCategory(event.target.value as GarmentCategory); }}>{categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-            <label className="field">Color<input required maxLength={40} value={color} onChange={(event) => setColor(event.target.value)} placeholder="Ej. Azul marino" /></label>
-            <label className="field"><span>Marca <span className="optional">(opcional)</span></span><input maxLength={60} value={brand} onChange={(event) => setBrand(event.target.value)} placeholder="¿De dónde viene?" /></label>
+            <label className="field">Nombre de la prenda<input className={suggestedFields.includes('name') ? 'field-suggested' : ''} required maxLength={80} value={name} onChange={(event) => { values.current.name = event.target.value; setName(event.target.value); clearSuggestion('name'); }} placeholder="Ej. Camiseta de lino" /></label>
+            <label className="field">Categoría<select className={suggestedFields.includes('category') ? 'field-suggested' : ''} value={category} onChange={(event) => { categoryEdited.current = true; values.current.category = event.target.value as GarmentCategory; setCategory(event.target.value as GarmentCategory); clearSuggestion('category'); }}>{categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+            <label className="field">Color<input className={suggestedFields.includes('color') ? 'field-suggested' : ''} required maxLength={40} value={color} onChange={(event) => { values.current.color = event.target.value; setColor(event.target.value); clearSuggestion('color'); }} placeholder="Ej. Azul marino" /></label>
+            <label className="field"><span>Marca <span className="optional">(opcional)</span></span><input className={suggestedFields.includes('brand') ? 'field-suggested' : ''} maxLength={60} value={brand} onChange={(event) => { values.current.brand = event.target.value; setBrand(event.target.value); clearSuggestion('brand'); }} placeholder="¿De dónde viene?" /></label>
             <label className="field">Precio (€)<input type="text" inputMode="decimal" required pattern="[0-9]+([.,][0-9]{1,2})?" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Ej. 25,50" /></label>
             <fieldset className="field field-wide choice-field">
               <legend>Temporada</legend>

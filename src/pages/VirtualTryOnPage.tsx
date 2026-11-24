@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { Download, Maximize2, Sparkles, Trash2 } from 'lucide-react';
+import { Download, Maximize2, Sparkles, Trash2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { Notice, PageHeading } from '../components/AppShell';
+import { VirtualTryOnUsage } from '../components/VirtualTryOnUsage';
 import { listGarments } from '../services/garments';
 import { deleteVirtualImage, generateVirtualImage, readVirtualImage, saveVirtualPhoto } from '../services/virtualTryOn';
 import type { Garment } from '../types';
@@ -35,7 +36,9 @@ export function VirtualTryOnPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const busyRef = useRef(false);
+  const resultDialogRef = useRef<HTMLDialogElement>(null);
   const [error, setError] = useState('');
+  const [showUsage, setShowUsage] = useState(false);
   const photoUrl = useBlobUrl(photo);
   const resultUrl = useBlobUrl(result);
   const selected = garments.find((garment) => garment.id === garmentId);
@@ -123,6 +126,14 @@ export function VirtualTryOnPage() {
         <Notice tone="info">Inicia sesión y configura Firebase para utilizar el vestuario virtual.</Notice>
       ) : (
         <>
+          {user.email === 'jesus.samperruiz@gmail.com' && user.emailVerified && (
+            <>
+              <button className="button-secondary virtual-usage-toggle" aria-expanded={showUsage} onClick={() => setShowUsage((open) => !open)}>
+                {showUsage ? 'Cerrar control de pruebas' : 'Control de pruebas'}
+              </button>
+              {showUsage && <VirtualTryOnUsage userId={user.uid} />}
+            </>
+          )}
           <div className="virtual-grid">
             <section className="virtual-card">
               <h2>1. Tu fotografía</h2>
@@ -166,10 +177,17 @@ export function VirtualTryOnPage() {
               <h2>Simulación orientativa generada por IA</h2>
               <img className="virtual-preview" src={resultUrl} alt="Simulación orientativa generada por IA" />
               <div className="virtual-actions">
-                <a className="button-secondary" href={resultUrl} target="_blank" rel="noreferrer"><Maximize2 size={16} /> Ampliar</a>
+                <button className="button-secondary" onClick={() => resultDialogRef.current?.showModal()}><Maximize2 size={16} /> Ampliar</button>
                 <a className="button-secondary" href={resultUrl} download={`simulacion.${result?.type === 'image/jpeg' ? 'jpg' : result?.type === 'image/webp' ? 'webp' : 'png'}`}><Download size={16} /> Descargar</a>
                 <button className="button-secondary" disabled={Boolean(busy)} onClick={() => removeImage('result')}><Trash2 size={16} /> Eliminar</button>
               </div>
+              <dialog ref={resultDialogRef} className="modal-panel virtual-image-dialog" aria-labelledby="virtual-image-title">
+                <div className="modal-header">
+                  <h2 id="virtual-image-title">Simulación ampliada</h2>
+                  <button className="icon-button" onClick={() => resultDialogRef.current?.close()} aria-label="Cerrar"><X size={20} /></button>
+                </div>
+                <img src={resultUrl} alt="Simulación orientativa generada por IA" />
+              </dialog>
             </section>
           )}
         </>

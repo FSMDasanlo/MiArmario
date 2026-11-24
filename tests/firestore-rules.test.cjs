@@ -28,6 +28,9 @@ test('las reglas permiten el precio válido y rechazan datos o usuarios incorrec
     await assert.rejects(setDoc(doc(db, 'users', user.uid, 'garments', 'no-price'), withoutPrice), { code: 'permission-denied' });
     await assert.rejects(setDoc(doc(db, 'users', user.uid, 'garments', 'wrong-image'), payload), { code: 'permission-denied' });
     await assert.rejects(getDoc(doc(db, 'users', 'other-user', 'garments', 'garment-1')), { code: 'permission-denied' });
+    const usage = doc(db, 'virtualTryOnDailyUsage', `2026-11-24_${user.uid}`);
+    await assert.rejects(getDoc(usage), { code: 'permission-denied' });
+    await assert.rejects(setDoc(usage, { day: '2026-11-24', uid: user.uid, count: 1 }), { code: 'permission-denied' });
   } finally {
     await deleteApp(app);
   }

@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["https://fsmdasanlo.github.io", "http://localhost:5173"],
+    "method": ["GET", "DELETE"],
+    "responseHeader": ["Authorization", "Content-Type", "X-Firebase-Storage-Version", "X-Firebase-AppCheck"],
+    "maxAgeSeconds": 3600
+  }
+]

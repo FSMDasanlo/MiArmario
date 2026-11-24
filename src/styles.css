@@ -82,6 +82,16 @@ h1, h2, h3, p { margin-top: 0; }
 .virtual-card p a { color: var(--magenta-dark); text-decoration: underline; }
 .virtual-preview { width: auto; max-width: 100%; max-height: 440px; margin: 15px 0; border-radius: 8px; object-fit: contain; }
 .virtual-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.virtual-image-dialog { border: 0; }
+.virtual-image-dialog::backdrop { background: #121b2c88; backdrop-filter: blur(3px); }
+.virtual-image-dialog img { display: block; max-width: 100%; max-height: 70vh; margin: auto; object-fit: contain; }
+.garment-form .field .field-suggested { color: #1558a6; font-weight: 600; }
+.virtual-usage-toggle { margin-bottom: 16px; }
+.usage-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-bottom: 16px; }
+.usage-table-container { overflow-x: auto; }
+.usage-table { width: 100%; border-collapse: collapse; text-align: left; }
+.usage-table th, .usage-table td { padding: 10px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.usage-table tfoot { font-weight: 700; }
 .virtual-upload { position: relative; cursor: pointer; }
 .virtual-upload input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .virtual-disabled { opacity: .6; cursor: not-allowed; }

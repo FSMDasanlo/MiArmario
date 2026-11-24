@@ -104,6 +104,15 @@ de Storage deben desplegarse para habilitar estas lecturas y eliminaciones;
 Firestore no necesita nuevas reglas. Las prendas siguen usando sus mecanismos
 existentes.
 
+El control de pruebas solo está disponible para la cuenta administradora con
+correo verificado. Guarda en Firestore un recuento diario por usuario y su
+correo, sin fotografías. Registra cada intento justo antes de llamar a la IA,
+incluso si luego falla; si no se puede registrar, no se envía la solicitud.
+La consulta incluye ambas fechas según la zona `Europe/Madrid` y empieza en
+el mes actual. El historial comienza con el despliegue de esta función: los
+intentos anteriores no se recuperan. El recuento puede incluir intentos que no
+se facturen y no sustituye la factura de Google Cloud.
+
 Para una primera prueba real, tras revisar y autorizar expresamente costes y
 tratamiento de imágenes:
 
@@ -137,7 +146,7 @@ tratamiento de imágenes:
    ```powershell
    npm run build --prefix functions
    npm run build
-   firebase deploy --only storage,functions:saveVirtualTryOnPhoto,functions:generateVirtualTryOn --project miarmario-15bf6
+   firebase deploy --only storage,functions:saveVirtualTryOnPhoto,functions:generateVirtualTryOn,functions:getVirtualTryOnUsage --project miarmario-15bf6
    ```
 
    Después publica la web siguiendo el procedimiento de GitHub Pages de abajo.

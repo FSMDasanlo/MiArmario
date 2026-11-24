@@ -54,3 +54,12 @@ export async function generateVirtualImage(userId: string, garmentId: string): P
   );
   await call({ garmentId, consent: true });
 }
+
+export async function getVirtualTryOnUsage(userId: string, from: string, to: string) {
+  const app = requireSession(userId);
+  const call = httpsCallable<{ from: string; to: string }, {
+    users: Array<{ uid: string; email: string | null; count: number }>;
+    total: number;
+  }>(getFunctions(app), 'getVirtualTryOnUsage');
+  return (await call({ from, to })).data;
+}

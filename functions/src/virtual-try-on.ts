@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { GoogleGenAI } from '@google/genai';
-import { getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { projectID } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
@@ -25,6 +25,48 @@ const generateSchema = z.object({
   garmentId: z.string().regex(/^[A-Za-z0-9_-]{1,150}$/),
   consent: z.literal(true),
 }).strict();
+
+const usageSchema = z.object({
+  from: z.iso.date(),
+  to: z.iso.date(),
+}).strict().refine((value) => value.from <= value.to);
+
+function madridDay(date: Date): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(date);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value;
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+export const getVirtualTryOnUsage = onCall(options, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Inicia sesión para consultar el control de pruebas.');
+  if (request.auth.token.email !== 'jesus.samperruiz@gmail.com' || request.auth.token.email_verified !== true) {
+    throw new HttpsError('permission-denied', 'No tienes permiso para consultar el control de pruebas.');
+  }
+  const input = usageSchema.safeParse(request.data);
+  if (!input.success) throw new HttpsError('invalid-argument', 'Selecciona un intervalo de fechas válido.');
+
+  const snapshot = await getFirestore().collection('virtualTryOnDailyUsage')
+    .where('day', '>=', input.data.from).where('day', '<=', input.data.to).get();
+  const users = new Map<string, { uid: string; email: string | null; count: number }>();
+  for (const document of snapshot.docs) {
+    const data = document.data();
+    if (typeof data.uid !== 'string' || (data.email !== null && typeof data.email !== 'string')
+      || !Number.isSafeInteger(data.count) || data.count < 0) {
+      throw new HttpsError('internal', 'Hay un registro de uso inválido. No se puede calcular el total.');
+    }
+    const current = users.get(data.uid);
+    if (current) {
+      current.count += data.count;
+      if (data.email) current.email = data.email;
+    } else {
+      users.set(data.uid, { uid: data.uid, email: data.email, count: data.count });
+    }
+  }
+  const rows = [...users.values()].sort((a, b) => (a.email ?? a.uid).localeCompare(b.email ?? b.uid));
+  return { users: rows, total: rows.reduce((sum, row) => sum + row.count, 0) };
+});
 
 export function validImage(bytes: Buffer, mimeType: string, maxBytes: number): boolean {
   if (!bytes.length || bytes.length > maxBytes) return false;
@@ -117,6 +159,10 @@ export const generateVirtualTryOn = onCall(options, async (request) => {
       location: 'global',
       httpOptions: { apiVersion: 'v1', timeout: 90_000, retryOptions: { attempts: 1 } },
     });
+    const day = madridDay(new Date());
+    await firestore.collection('virtualTryOnDailyUsage').doc(`${day}_${uid}`).set({
+      day, uid, email: request.auth?.token.email ?? null, count: FieldValue.increment(1),
+    }, { merge: true });
     const response = await ai.models.generateContent({
       model: 'gemini-nano-banana-2.1',
       contents: [{
