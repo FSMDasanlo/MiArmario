@@ -148,6 +148,21 @@ test('incluye la referencia y todas las prendas seleccionadas con el prompt de c
   assert.equal(calls.length, 6);
 });
 
+test('prioriza las facciones de la foto en las modalidades con referencia facial', async () => {
+  const { functions, calls } = setup();
+  for (const mode of ['face', 'mannequin-face']) {
+    await functions.generateVirtualTryOn.handler({
+      auth: { uid: 'alice', token: {} }, data: { mode, garmentIds: ['item-1'], consent: true },
+    });
+    const parts = calls.at(-1).input.contents[0].parts;
+    assert.match(parts[0].text, /identidad de la persona de la primera imagen es prioritaria/);
+    assert.match(parts[0].text, /ojos, cejas, nariz, labios, mandíbula/);
+    assert.match(parts[0].text, /No embellezcas, rejuvenezcas, estilices/);
+    assert.equal(parts[2].inlineData.data, jpeg.toString('base64'));
+  }
+  assert.equal(calls.length, 2);
+});
+
 test('rechaza modalidades con referencias ausentes y selecciones inválidas antes de generar', async () => {
   const { functions, files, calls } = setup();
   const generate = functions.generateVirtualTryOn.handler;

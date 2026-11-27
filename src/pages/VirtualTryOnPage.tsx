@@ -274,7 +274,7 @@ export function VirtualTryOnPage() {
                 <div className="virtual-grid">
                   {needsFace && <section className="virtual-card">
                     <h2>Fotografía de tu cara</h2>
-                    <p>JPG, PNG o WebP, hasta 5 MB. Se guarda de forma privada en Firebase Storage y puedes eliminarla cuando quieras.</p>
+                    <p>JPG, PNG o WebP, hasta 5 MB. Usa una foto nítida, con buena luz y el rostro visible, sin filtros. Se guarda de forma privada en Firebase Storage y puedes eliminarla cuando quieras.</p>
                     {faceUrl && <img className="virtual-preview" src={faceUrl} alt="Referencia de tu cara" />}
                     <div className="virtual-actions">
                       <label className={`button-secondary virtual-upload ${busy ? 'virtual-disabled' : ''}`}>{face ? 'Sustituir fotografía' : 'Elegir fotografía'}
