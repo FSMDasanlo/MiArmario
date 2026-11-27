@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { Check, Download, Maximize2, Plus, Shirt, Sparkles, Trash2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import mannequinManUrl from '../../img/maniqui_hombre.jpeg';
+import mannequinWomanUrl from '../../img/maniqui_mujer.jpeg';
 import { useAuth } from '../auth/AuthProvider';
 import { Notice, PageHeading } from '../components/AppShell';
 import { VirtualTryOnUsage } from '../components/VirtualTryOnUsage';
 import { listGarments } from '../services/garments';
 import { deleteVirtualImage, generateCustomVirtualImage, generateVirtualImage, readVirtualImage, saveVirtualPhoto, saveVirtualReference, type CustomTryOnMode, type VirtualReference } from '../services/virtualTryOn';
 import type { Garment } from '../types';
+
+type ModelChoice = Exclude<CustomTryOnMode, 'body' | 'mannequin'> | 'mannequin-man' | 'mannequin-woman';
 
 function useBlobUrl(blob: Blob | null): string {
   const [url, setUrl] = useState('');
@@ -37,7 +41,7 @@ export function VirtualTryOnPage() {
   const [additionalGarmentIds, setAdditionalGarmentIds] = useState<string[]>([]);
   const [garmentIds, setGarmentIds] = useState<string[]>([]);
   const [section, setSection] = useState<'photo' | 'custom'>('photo');
-  const [customMode, setCustomMode] = useState<CustomTryOnMode>('face');
+  const [customMode, setCustomMode] = useState<ModelChoice>('face');
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
@@ -52,7 +56,9 @@ export function VirtualTryOnPage() {
   const selected = garments.find((garment) => garment.id === garmentId);
   const photoGarmentIds = [garmentId, ...additionalGarmentIds].filter(Boolean);
   const needsFace = customMode === 'face' || customMode === 'mannequin-face';
-  const needsMannequin = customMode === 'mannequin' || customMode === 'mannequin-face';
+  const needsMannequin = customMode === 'mannequin-face';
+  const defaultMannequinUrl = customMode === 'mannequin-man' ? mannequinManUrl
+    : customMode === 'mannequin-woman' ? mannequinWomanUrl : undefined;
 
   useEffect(() => {
     if (!user) {
@@ -170,7 +176,8 @@ export function VirtualTryOnPage() {
     if (!user || !garmentIds.length || (needsFace && !face) || (needsMannequin && !mannequin) || !consent || busyRef.current) return;
     void run('Generando simulación…', async () => {
       setConsent(false);
-      await generateCustomVirtualImage(user.uid, customMode, garmentIds);
+      const mode = customMode === 'mannequin-man' || customMode === 'mannequin-woman' ? 'mannequin' : customMode;
+      await generateCustomVirtualImage(user.uid, mode, garmentIds, defaultMannequinUrl);
       setResult(null);
       const generated = await readVirtualImage(user.uid, 'result');
       if (!generated) throw new Error('La simulación se guardó, pero no se pudo recuperar. Recarga la página antes de volver a intentarlo.');
@@ -260,16 +267,23 @@ export function VirtualTryOnPage() {
                 <label className="virtual-select">Tipo de modelo
                   <select value={customMode} disabled={Boolean(busy)} onChange={(event) => {
                     const nextMode = event.target.value;
-                    if (nextMode === 'face' || nextMode === 'mannequin' || nextMode === 'mannequin-face' || nextMode === 'generated') setCustomMode(nextMode);
+                    if (nextMode === 'face' || nextMode === 'mannequin-man' || nextMode === 'mannequin-woman' || nextMode === 'mannequin-face' || nextMode === 'generated') setCustomMode(nextMode);
                     setConsent(false);
                   }}>
                     <option value="face">Mi cara</option>
-                    <option value="mannequin">Maniquí</option>
+                    <option value="mannequin-man">Maniquí hombre</option>
+                    <option value="mannequin-woman">Maniquí mujer</option>
                     <option value="mannequin-face">Maniquí + mi cara</option>
                     <option value="generated">Modelo generado (sin foto)</option>
                   </select>
                 </label>
               </section>
+              {defaultMannequinUrl && (
+                <section className="virtual-card">
+                  <h2>{customMode === 'mannequin-man' ? 'Maniquí hombre' : 'Maniquí mujer'}</h2>
+                  <img className="virtual-preview" src={defaultMannequinUrl} alt={customMode === 'mannequin-man' ? 'Maniquí hombre seleccionado' : 'Maniquí mujer seleccionado'} />
+                </section>
+              )}
               {(needsFace || needsMannequin) && (
                 <div className="virtual-grid">
                   {needsFace && <section className="virtual-card">

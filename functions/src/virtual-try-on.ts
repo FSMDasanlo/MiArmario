@@ -17,9 +17,12 @@ const options = {
   maxInstances: 5,
 };
 
-const uploadSchema = z.object({
+const imageSchema = z.object({
   mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
   data: z.string().min(1).max(Math.ceil(maxInputBytes / 3) * 4),
+}).strict();
+
+const uploadSchema = imageSchema.extend({
   kind: z.enum(['photo', 'face', 'mannequin']).optional(),
 }).strict();
 
@@ -32,8 +35,9 @@ const customGenerateSchema = z.object({
   mode: z.enum(['body', 'face', 'mannequin', 'mannequin-face', 'generated']),
   garmentIds: z.array(z.string().regex(/^[A-Za-z0-9_-]{1,150}$/)).min(1).max(maxGarments)
     .refine((ids) => new Set(ids).size === ids.length),
+  mannequinImage: imageSchema.optional(),
   consent: z.literal(true),
-}).strict();
+}).strict().refine((value) => !value.mannequinImage || value.mode === 'mannequin');
 
 const usageSchema = z.object({
   from: z.iso.date(),
@@ -85,6 +89,14 @@ export function validImage(bytes: Buffer, mimeType: string, maxBytes: number): b
   return false;
 }
 
+function decodeImage(image: z.infer<typeof imageSchema>): { bytes: Buffer; mimeType: string } {
+  const bytes = Buffer.from(image.data, 'base64');
+  if (bytes.toString('base64') !== image.data || !validImage(bytes, image.mimeType, maxInputBytes)) {
+    throw new HttpsError('invalid-argument', 'La fotografía debe ser JPG, PNG o WebP y pesar como máximo 5 MB.');
+  }
+  return { bytes, mimeType: image.mimeType };
+}
+
 function requireUser(uid: string | undefined): string {
   if (!uid) throw new HttpsError('unauthenticated', 'Inicia sesión para utilizar el vestuario virtual.');
   return uid;
@@ -116,10 +128,7 @@ export const saveVirtualTryOnPhoto = onCall(options, async (request) => {
   if (!input.success) {
     throw new HttpsError('invalid-argument', 'La fotografía debe ser JPG, PNG o WebP y pesar como máximo 5 MB.');
   }
-  const bytes = Buffer.from(input.data.data, 'base64');
-  if (bytes.toString('base64') !== input.data.data || !validImage(bytes, input.data.mimeType, maxInputBytes)) {
-    throw new HttpsError('invalid-argument', 'La fotografía debe ser JPG, PNG o WebP y pesar como máximo 5 MB.');
-  }
+  const { bytes } = decodeImage(input.data);
   try {
     const imageName = input.data.kind ?? 'photo';
     await getStorage().bucket().file(`users/${uid}/virtualTryOn/${imageName}`).save(bytes, {
@@ -138,6 +147,7 @@ export const generateVirtualTryOn = onCall(options, async (request) => {
   const legacyInput = generateSchema.safeParse(request.data);
   let mode: 'photo' | z.infer<typeof customGenerateSchema>['mode'];
   let garmentIds: string[];
+  let mannequinImage: { bytes: Buffer; mimeType: string } | undefined;
   if (legacyInput.success) {
     mode = 'photo';
     garmentIds = [legacyInput.data.garmentId];
@@ -148,6 +158,7 @@ export const generateVirtualTryOn = onCall(options, async (request) => {
     }
     mode = customInput.data.mode;
     garmentIds = customInput.data.garmentIds;
+    if (customInput.data.mannequinImage) mannequinImage = decodeImage(customInput.data.mannequinImage);
   }
 
   const firestore = getFirestore();
@@ -175,7 +186,8 @@ export const generateVirtualTryOn = onCall(options, async (request) => {
         : mode === 'mannequin' ? ['mannequin']
           : mode === 'mannequin-face' ? ['face', 'mannequin'] : [];
     const [references, garments] = await Promise.all([
-      Promise.all(referenceNames.map((name) => readImage(`users/${uid}/virtualTryOn/${name}`))),
+      Promise.all(referenceNames.map((name) => name === 'mannequin' && mannequinImage
+        ? Promise.resolve(mannequinImage) : readImage(`users/${uid}/virtualTryOn/${name}`))),
       Promise.all(garmentPaths.map(readImage)),
     ]);
     const project = projectID.value();

@@ -31,8 +31,7 @@ export async function saveVirtualPhoto(userId: string, photo: File): Promise<voi
   await saveVirtualReference(userId, 'photo', photo);
 }
 
-export async function saveVirtualReference(userId: string, kind: Exclude<VirtualReference, 'result'>, photo: File): Promise<void> {
-  const app = requireSession(userId);
+async function encodePhoto(photo: Blob): Promise<{ data: string; mimeType: string }> {
   if (!allowedTypes.includes(photo.type) || photo.size === 0 || photo.size > maxPhotoBytes) {
     throw new Error('La fotografía debe ser JPG, PNG o WebP y pesar como máximo 5 MB.');
   }
@@ -42,11 +41,16 @@ export async function saveVirtualReference(userId: string, kind: Exclude<Virtual
     reader.onerror = () => reject(new Error('No se pudo leer la fotografía.'));
     reader.readAsDataURL(photo);
   });
-  const data = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  return { data: dataUrl.slice(dataUrl.indexOf(',') + 1), mimeType: photo.type };
+}
+
+export async function saveVirtualReference(userId: string, kind: Exclude<VirtualReference, 'result'>, photo: File): Promise<void> {
+  const app = requireSession(userId);
+  const image = await encodePhoto(photo);
   const call = httpsCallable<{ data: string; mimeType: string; kind?: Exclude<VirtualReference, 'result'> }, { saved: boolean }>(
     getFunctions(app), 'saveVirtualTryOnPhoto', { timeout: 120000 },
   );
-  await call({ data, mimeType: photo.type, ...(kind === 'photo' ? {} : { kind }) });
+  await call({ ...image, ...(kind === 'photo' ? {} : { kind }) });
 }
 
 export async function deleteVirtualImage(userId: string, name: VirtualReference): Promise<void> {
@@ -61,12 +65,18 @@ export async function generateVirtualImage(userId: string, garmentId: string): P
   await call({ garmentId, consent: true });
 }
 
-export async function generateCustomVirtualImage(userId: string, mode: CustomTryOnMode, garmentIds: string[]): Promise<void> {
+export async function generateCustomVirtualImage(userId: string, mode: CustomTryOnMode, garmentIds: string[], mannequinUrl?: string): Promise<void> {
   const app = requireSession(userId);
-  const call = httpsCallable<{ mode: CustomTryOnMode; garmentIds: string[]; consent: true }, { generated: boolean }>(
+  let mannequinImage: { data: string; mimeType: string } | undefined;
+  if (mannequinUrl) {
+    const response = await fetch(mannequinUrl);
+    if (!response.ok) throw new Error('No se pudo cargar la imagen del maniquí. Recarga la página y vuelve a intentarlo.');
+    mannequinImage = await encodePhoto(await response.blob());
+  }
+  const call = httpsCallable<{ mode: CustomTryOnMode; garmentIds: string[]; consent: true; mannequinImage?: { data: string; mimeType: string } }, { generated: boolean }>(
     getFunctions(app), 'generateVirtualTryOn', { timeout: 135000 },
   );
-  await call({ mode, garmentIds, consent: true });
+  await call({ mode, garmentIds, consent: true, ...(mannequinImage ? { mannequinImage } : {}) });
 }
 
 export async function getVirtualTryOnUsage(userId: string, from: string, to: string) {

@@ -163,6 +163,37 @@ test('prioriza las facciones de la foto en las modalidades con referencia facial
   assert.equal(calls.length, 2);
 });
 
+test('envía cada maniquí predeterminado sin sustituir el maniquí privado', async () => {
+  const { functions, calls, saves, files } = setup();
+  for (const name of ['maniqui_hombre.jpeg', 'maniqui_mujer.jpeg']) {
+    const bytes = fs.readFileSync(path.join(__dirname, '..', '..', 'img', name));
+    await functions.generateVirtualTryOn.handler({
+      auth: { uid: 'alice', token: {} },
+      data: { mode: 'mannequin', garmentIds: ['item-1'], consent: true, mannequinImage: { mimeType: 'image/jpeg', data: bytes.toString('base64') } },
+    });
+    const parts = calls.at(-1).input.contents[0].parts;
+    assert.match(parts[0].text, /mismo maniquí/);
+    assert.deepEqual(parts.filter((part) => part.inlineData).map((part) => Buffer.from(part.inlineData.data, 'base64')), [bytes, png]);
+  }
+  assert.equal(calls.length, 2);
+  assert.equal(saves.some((save) => save.filePath.endsWith('/mannequin')), false);
+  assert.deepEqual(files.get('users/alice/virtualTryOn/mannequin').bytes, png);
+});
+
+test('rechaza maniquíes predeterminados inválidos antes de llamar a la IA', async () => {
+  const { functions, calls } = setup();
+  for (const [mode, mannequinImage] of [
+    ['mannequin', { mimeType: 'image/jpeg', data: 'invalid' }],
+    ['mannequin', { mimeType: 'image/jpeg', data: png.toString('base64') }],
+    ['face', { mimeType: 'image/jpeg', data: jpeg.toString('base64') }],
+  ]) {
+    await assert.rejects(functions.generateVirtualTryOn.handler({
+      auth: { uid: 'alice', token: {} }, data: { mode, garmentIds: ['item-1'], consent: true, mannequinImage },
+    }), { code: 'invalid-argument' });
+  }
+  assert.equal(calls.length, 0);
+});
+
 test('rechaza modalidades con referencias ausentes y selecciones inválidas antes de generar', async () => {
   const { functions, files, calls } = setup();
   const generate = functions.generateVirtualTryOn.handler;
