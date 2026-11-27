@@ -4,6 +4,8 @@ import { auth, firebaseApp } from '../firebase/client';
 
 const maxPhotoBytes = 5 * 1024 * 1024;
 const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+export type VirtualReference = 'photo' | 'face' | 'mannequin' | 'result';
+export type CustomTryOnMode = 'body' | 'face' | 'mannequin' | 'mannequin-face' | 'generated';
 
 function requireSession(userId: string) {
   if (!firebaseApp || !auth?.currentUser || auth.currentUser.uid !== userId) {
@@ -12,11 +14,11 @@ function requireSession(userId: string) {
   return firebaseApp;
 }
 
-function imageRef(userId: string, name: 'photo' | 'result') {
+function imageRef(userId: string, name: VirtualReference) {
   return ref(getStorage(requireSession(userId)), `users/${userId}/virtualTryOn/${name}`);
 }
 
-export async function readVirtualImage(userId: string, name: 'photo' | 'result'): Promise<Blob | null> {
+export async function readVirtualImage(userId: string, name: VirtualReference): Promise<Blob | null> {
   try {
     return await getBlob(imageRef(userId, name), 8 * 1024 * 1024);
   } catch (error) {
@@ -26,6 +28,10 @@ export async function readVirtualImage(userId: string, name: 'photo' | 'result')
 }
 
 export async function saveVirtualPhoto(userId: string, photo: File): Promise<void> {
+  await saveVirtualReference(userId, 'photo', photo);
+}
+
+export async function saveVirtualReference(userId: string, kind: Exclude<VirtualReference, 'result'>, photo: File): Promise<void> {
   const app = requireSession(userId);
   if (!allowedTypes.includes(photo.type) || photo.size === 0 || photo.size > maxPhotoBytes) {
     throw new Error('La fotografía debe ser JPG, PNG o WebP y pesar como máximo 5 MB.');
@@ -37,13 +43,13 @@ export async function saveVirtualPhoto(userId: string, photo: File): Promise<voi
     reader.readAsDataURL(photo);
   });
   const data = dataUrl.slice(dataUrl.indexOf(',') + 1);
-  const call = httpsCallable<{ data: string; mimeType: string }, { saved: boolean }>(
+  const call = httpsCallable<{ data: string; mimeType: string; kind?: Exclude<VirtualReference, 'result'> }, { saved: boolean }>(
     getFunctions(app), 'saveVirtualTryOnPhoto', { timeout: 120000 },
   );
-  await call({ data, mimeType: photo.type });
+  await call({ data, mimeType: photo.type, ...(kind === 'photo' ? {} : { kind }) });
 }
 
-export async function deleteVirtualImage(userId: string, name: 'photo' | 'result'): Promise<void> {
+export async function deleteVirtualImage(userId: string, name: VirtualReference): Promise<void> {
   await deleteObject(imageRef(userId, name));
 }
 
@@ -53,6 +59,14 @@ export async function generateVirtualImage(userId: string, garmentId: string): P
     getFunctions(app), 'generateVirtualTryOn', { timeout: 135000 },
   );
   await call({ garmentId, consent: true });
+}
+
+export async function generateCustomVirtualImage(userId: string, mode: CustomTryOnMode, garmentIds: string[]): Promise<void> {
+  const app = requireSession(userId);
+  const call = httpsCallable<{ mode: CustomTryOnMode; garmentIds: string[]; consent: true }, { generated: boolean }>(
+    getFunctions(app), 'generateVirtualTryOn', { timeout: 135000 },
+  );
+  await call({ mode, garmentIds, consent: true });
 }
 
 export async function getVirtualTryOnUsage(userId: string, from: string, to: string) {

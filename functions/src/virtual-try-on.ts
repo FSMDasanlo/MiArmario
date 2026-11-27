@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 const maxInputBytes = 5 * 1024 * 1024;
 const maxOutputBytes = 8 * 1024 * 1024;
+const maxGarments = 6;
 const options = {
   region: 'us-central1',
   cors: ['https://fsmdasanlo.github.io', 'http://localhost:5173'],
@@ -19,10 +20,18 @@ const options = {
 const uploadSchema = z.object({
   mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
   data: z.string().min(1).max(Math.ceil(maxInputBytes / 3) * 4),
+  kind: z.enum(['photo', 'face', 'mannequin']).optional(),
 }).strict();
 
 const generateSchema = z.object({
   garmentId: z.string().regex(/^[A-Za-z0-9_-]{1,150}$/),
+  consent: z.literal(true),
+}).strict();
+
+const customGenerateSchema = z.object({
+  mode: z.enum(['body', 'face', 'mannequin', 'mannequin-face', 'generated']),
+  garmentIds: z.array(z.string().regex(/^[A-Za-z0-9_-]{1,150}$/)).min(1).max(maxGarments)
+    .refine((ids) => new Set(ids).size === ids.length),
   consent: z.literal(true),
 }).strict();
 
@@ -112,7 +121,8 @@ export const saveVirtualTryOnPhoto = onCall(options, async (request) => {
     throw new HttpsError('invalid-argument', 'La fotografía debe ser JPG, PNG o WebP y pesar como máximo 5 MB.');
   }
   try {
-    await getStorage().bucket().file(`users/${uid}/virtualTryOn/photo`).save(bytes, {
+    const imageName = input.data.kind ?? 'photo';
+    await getStorage().bucket().file(`users/${uid}/virtualTryOn/${imageName}`).save(bytes, {
       resumable: false,
       metadata: { contentType: input.data.mimeType, cacheControl: 'private, no-store' },
     });
@@ -125,17 +135,30 @@ export const saveVirtualTryOnPhoto = onCall(options, async (request) => {
 
 export const generateVirtualTryOn = onCall(options, async (request) => {
   const uid = requireUser(request.auth?.uid);
-  const input = generateSchema.safeParse(request.data);
-  if (!input.success) throw new HttpsError('invalid-argument', 'Selecciona una prenda y acepta el envío de las fotografías.');
-
-  const firestore = getFirestore();
-  const garmentId = input.data.garmentId;
-  const expectedPath = `users/${uid}/garments/${garmentId}/photo`;
-  const garment = await firestore.doc(`users/${uid}/garments/${garmentId}`).get();
-  if (!garment.exists || garment.data()?.imagePath !== expectedPath) {
-    throw new HttpsError('failed-precondition', 'La prenda no existe o no tiene una fotografía válida.');
+  const legacyInput = generateSchema.safeParse(request.data);
+  let mode: 'photo' | z.infer<typeof customGenerateSchema>['mode'];
+  let garmentIds: string[];
+  if (legacyInput.success) {
+    mode = 'photo';
+    garmentIds = [legacyInput.data.garmentId];
+  } else {
+    const customInput = customGenerateSchema.safeParse(request.data);
+    if (!customInput.success) {
+      throw new HttpsError('invalid-argument', 'Selecciona al menos una prenda y acepta el envío de las fotografías.');
+    }
+    mode = customInput.data.mode;
+    garmentIds = customInput.data.garmentIds;
   }
 
+  const firestore = getFirestore();
+  const garmentPaths = await Promise.all(garmentIds.map(async (garmentId) => {
+    const expectedPath = `users/${uid}/garments/${garmentId}/photo`;
+    const garment = await firestore.doc(`users/${uid}/garments/${garmentId}`).get();
+    if (!garment.exists || garment.data()?.imagePath !== expectedPath) {
+      throw new HttpsError('failed-precondition', 'Una de las prendas no existe o no tiene una fotografía válida.');
+    }
+    return expectedPath;
+  }));
   const lock = firestore.doc(`users/${uid}/private/virtualTryOnUsage`);
   const operationId = randomUUID();
   await firestore.runTransaction(async (transaction) => {
@@ -147,9 +170,13 @@ export const generateVirtualTryOn = onCall(options, async (request) => {
   });
 
   try {
-    const [person, clothing] = await Promise.all([
-      readImage(`users/${uid}/virtualTryOn/photo`),
-      readImage(expectedPath),
+    const referenceNames = mode === 'photo' || mode === 'body' ? ['photo']
+      : mode === 'face' ? ['face']
+        : mode === 'mannequin' ? ['mannequin']
+          : mode === 'mannequin-face' ? ['face', 'mannequin'] : [];
+    const [references, garments] = await Promise.all([
+      Promise.all(referenceNames.map((name) => readImage(`users/${uid}/virtualTryOn/${name}`))),
+      Promise.all(garmentPaths.map(readImage)),
     ]);
     const project = projectID.value();
     if (!project) throw new HttpsError('failed-precondition', 'El servicio de simulación no está configurado.');
@@ -163,15 +190,38 @@ export const generateVirtualTryOn = onCall(options, async (request) => {
     await firestore.collection('virtualTryOnDailyUsage').doc(`${day}_${uid}`).set({
       day, uid, email: request.auth?.token.email ?? null, count: FieldValue.increment(1),
     }, { merge: true });
+    const legacyPrompt = 'Genera una única fotografía realista. La primera imagen muestra a la persona y la segunda muestra la prenda. Viste a la persona de la primera imagen con la prenda de la segunda. Conserva su rostro, cabello, postura, proporciones, fondo e iluminación. Reproduce fielmente el color, estampado, diseño y detalles visibles de la prenda. No cambies otras prendas ni añadas accesorios.';
+    const customPrompts = {
+      body: 'Genera una única fotografía realista. La primera imagen muestra a la persona y las siguientes imágenes muestran las prendas numeradas. Viste a la persona de la primera imagen con todas las prendas, formando un conjunto coherente. Conserva su rostro, cabello, postura, proporciones, fondo e iluminación. Reproduce fielmente el color, estampado, diseño y detalles visibles de cada prenda.',
+      face: 'Genera una única fotografía fotorrealista de cuerpo entero. La primera imagen es la referencia de identidad facial: conserva fielmente sus rasgos, edad aparente, tono de piel y cabello; no embellezcas ni sustituyas la identidad. No hay referencia corporal: crea un cuerpo humano, postura y entorno naturales. Las imágenes siguientes son prendas de referencia; viste al modelo con todas ellas como un conjunto coherente.',
+      mannequin: 'Genera una única fotografía fotorrealista del mismo maniquí de la primera imagen, vestido con las prendas de referencia que aparecen después. Conserva estrictamente las proporciones, postura, orientación, encuadre y características del maniquí. No lo conviertas en una persona ni alteres su cuerpo.',
+      'mannequin-face': 'Genera una única fotografía fotorrealista usando como primera imagen la referencia de identidad facial y como segunda imagen el maniquí corporal. Conserva fielmente la identidad y los rasgos del rostro de la primera imagen e intégralo de forma natural en la cabeza del maniquí. Conserva estrictamente las proporciones, postura, orientación y encuadre del maniquí. Las imágenes siguientes son las prendas que debe vestir.',
+      generated: 'Genera una única fotografía fotorrealista de un modelo humano adulto, con cuerpo, postura y entorno naturales elegidos libremente. Las imágenes siguientes son prendas de referencia: viste al modelo con todas ellas como un conjunto coherente.',
+    } as const;
+    const prompt = mode === 'photo' ? legacyPrompt : customPrompts[mode];
+    const fullPrompt = legacyInput.success
+      ? [
+        { text: legacyPrompt },
+        { inlineData: { mimeType: references[0]!.mimeType, data: references[0]!.bytes.toString('base64') } },
+        { inlineData: { mimeType: garments[0]!.mimeType, data: garments[0]!.bytes.toString('base64') } },
+      ]
+      : [
+        { text: prompt },
+        ...references.flatMap((image, index) => [
+          { text: `Referencia ${index + 1} (${referenceNames[index]}):` },
+          { inlineData: { mimeType: image.mimeType, data: image.bytes.toString('base64') } },
+        ]),
+        ...garments.flatMap((image, index) => [
+          { text: `Prenda ${index + 1}:` },
+          { inlineData: { mimeType: image.mimeType, data: image.bytes.toString('base64') } },
+        ]),
+        { text: 'Prioriza la fidelidad exacta a cada prenda: conserva sus colores, estampados, diseño, tejido y detalles visibles; no inventes, sustituyas, omitas ni combines diseños entre prendas. Adapta cada prenda de forma realista al cuerpo. El resultado debe parecer una sola fotografía, nunca un collage. No añadas accesorios ni prendas que no estén en las referencias.' },
+      ];
     const response = await ai.models.generateContent({
       model: 'gemini-nano-banana-2.1',
       contents: [{
         role: 'user',
-        parts: [
-          { text: 'Genera una única fotografía realista. La primera imagen muestra a la persona y la segunda muestra la prenda. Viste a la persona de la primera imagen con la prenda de la segunda. Conserva su rostro, cabello, postura, proporciones, fondo e iluminación. Reproduce fielmente el color, estampado, diseño y detalles visibles de la prenda. No cambies otras prendas ni añadas accesorios.' },
-          { inlineData: { mimeType: person.mimeType, data: person.bytes.toString('base64') } },
-          { inlineData: { mimeType: clothing.mimeType, data: clothing.bytes.toString('base64') } },
-        ],
+        parts: fullPrompt,
       }],
       config: {
         candidateCount: 1,

@@ -14,7 +14,7 @@ service firebase.storage {
     match /users/{userId}/virtualTryOn/{fileName} {
       allow read, delete: if request.auth != null
         && request.auth.uid == userId
-        && fileName in ['photo', 'result'];
+        && fileName in ['photo', 'face', 'mannequin', 'result'];
       allow write: if false;
     }
   }

@@ -80,6 +80,12 @@ h1, h2, h3, p { margin-top: 0; }
 .virtual-card h2 { color: var(--navy); font-size: 18px; }
 .virtual-card p { color: #606774; font-size: 14px; line-height: 1.6; }
 .virtual-card p a { color: var(--magenta-dark); text-decoration: underline; }
+.virtual-tabs { display: flex; gap: 8px; margin-bottom: 16px; padding: 5px; border: 1px solid var(--line); border-radius: 9px; background: #f7f5f0; }
+.virtual-tab { flex: 1; min-height: 42px; padding: 8px 12px; border: 0; border-radius: 6px; background: transparent; color: #606774; font-weight: 600; cursor: pointer; }
+.virtual-tab-active { background: white; color: var(--navy); box-shadow: 0 1px 4px #17253d14; }
+.virtual-garment-picker { max-height: 360px; }
+.virtual-extra-garment { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; margin-top: 10px; }
+.virtual-add-garment { margin-top: 10px; }
 .virtual-preview { width: auto; max-width: 100%; max-height: 440px; margin: 15px 0; border-radius: 8px; object-fit: contain; }
 .virtual-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .virtual-image-dialog { border: 0; }
@@ -362,6 +368,8 @@ h1, h2, h3, p { margin-top: 0; }
   .mobile-nav-link { display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 0; background: transparent; color: #9297a0; font-size: 11px; }
   .mobile-nav-active { color: var(--magenta-dark); }
   .outfit-grid { grid-template-columns: 1fr; }
+  .virtual-tabs { gap: 4px; padding: 4px; }
+  .virtual-tab { min-height: 44px; padding: 7px 6px; font-size: 13px; }
   .outfit-collage { height: 140px; }
   .outfit-card-actions { opacity: 1; }
   .assistant-main { padding: 15px; }
