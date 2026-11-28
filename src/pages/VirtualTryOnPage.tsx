@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useId, useRef, useState, type ChangeEvent } from 'react';
 import { Check, Download, Maximize2, Plus, Shirt, Sparkles, Trash2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import mannequinManUrl from '../../img/maniqui_hombre.jpeg';
@@ -8,9 +8,53 @@ import { Notice, PageHeading } from '../components/AppShell';
 import { VirtualTryOnUsage } from '../components/VirtualTryOnUsage';
 import { listGarments } from '../services/garments';
 import { deleteVirtualImage, generateCustomVirtualImage, generateVirtualImage, readVirtualImage, saveVirtualPhoto, saveVirtualReference, type CustomTryOnMode, type VirtualReference } from '../services/virtualTryOn';
-import type { Garment } from '../types';
+import { garmentCategories, type Garment, type GarmentCategory } from '../types';
 
 type ModelChoice = Exclude<CustomTryOnMode, 'body' | 'mannequin'> | 'mannequin-man' | 'mannequin-woman';
+
+function PhotoGarmentPicker({ label, garments, value, disabled, onChange }: {
+  label: string;
+  garments: Garment[];
+  value: string;
+  disabled: boolean;
+  onChange: (id: string) => void;
+}) {
+  const [category, setCategory] = useState<GarmentCategory | ''>('');
+  const groupName = useId();
+  const selected = garments.find((garment) => garment.id === value);
+  const filtered = garments.filter((garment) => garment.category === category);
+
+  return (
+    <div className="virtual-photo-picker">
+      <label className="virtual-select">{label}: categoría
+        <select value={category} disabled={disabled} onChange={(event) => {
+          setCategory(garmentCategories.find((item) => item === event.target.value) ?? '');
+        }}>
+          <option value="">Elige una categoría</option>
+          {garmentCategories.map((item) => <option key={item} value={item}>{item.charAt(0).toUpperCase() + item.slice(1)}</option>)}
+        </select>
+      </label>
+      {selected && <div className="virtual-picker-summary">
+        <span>Seleccionada: <strong>{selected.name}</strong> — {selected.color}</span>
+        <button type="button" className="button-secondary" disabled={disabled} onClick={() => onChange('')}>Quitar selección</button>
+      </div>}
+      {category && (filtered.length ? (
+        <fieldset className="choice-field">
+          <legend>{label}</legend>
+          <div className="garment-picker">
+            {filtered.map((garment) => (
+              <label key={garment.id} className={`garment-picker-item ${value === garment.id ? 'garment-picker-selected' : ''}`}>
+                <input type="radio" name={groupName} disabled={disabled} checked={value === garment.id} onChange={() => onChange(garment.id)} />
+                {garment.imageUrl ? <img src={garment.imageUrl} alt="" /> : <span className="picker-placeholder"><Shirt size={17} /></span>}
+                <span><strong>{garment.name}</strong><small>{garment.color}</small></span><span className="picker-check"><Check size={14} /></span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : <p className="picker-empty">No hay prendas disponibles en esta categoría.</p>)}
+    </div>
+  );
+}
 
 function useBlobUrl(blob: Blob | null): string {
   const [url, setUrl] = useState('');
@@ -38,7 +82,8 @@ export function VirtualTryOnPage() {
   const [mannequin, setMannequin] = useState<Blob | null>(null);
   const [result, setResult] = useState<Blob | null>(null);
   const [garmentId, setGarmentId] = useState('');
-  const [additionalGarmentIds, setAdditionalGarmentIds] = useState<string[]>([]);
+  const [additionalGarments, setAdditionalGarments] = useState<{ key: number; id: string }[]>([]);
+  const nextGarmentKey = useRef(0);
   const [garmentIds, setGarmentIds] = useState<string[]>([]);
   const [section, setSection] = useState<'photo' | 'custom'>('photo');
   const [customMode, setCustomMode] = useState<ModelChoice>('face');
@@ -54,7 +99,7 @@ export function VirtualTryOnPage() {
   const mannequinUrl = useBlobUrl(mannequin);
   const resultUrl = useBlobUrl(result);
   const selected = garments.find((garment) => garment.id === garmentId);
-  const photoGarmentIds = [garmentId, ...additionalGarmentIds].filter(Boolean);
+  const photoGarmentIds = [garmentId, ...additionalGarments.map((item) => item.id)].filter(Boolean);
   const needsFace = customMode === 'face' || customMode === 'mannequin-face';
   const needsMannequin = customMode === 'mannequin-face';
   const defaultMannequinUrl = customMode === 'mannequin-man' ? mannequinManUrl
@@ -152,7 +197,7 @@ export function VirtualTryOnPage() {
 
   function generate() {
     const [firstGarmentId] = photoGarmentIds;
-    if (!user || !photo || !garmentId || !firstGarmentId || additionalGarmentIds.some((id) => !id) || !consent || busyRef.current) return;
+    if (!user || !photo || !garmentId || !firstGarmentId || additionalGarments.some((item) => !item.id) || !consent || busyRef.current) return;
     void run('Generando simulación…', async () => {
       setConsent(false);
       if (photoGarmentIds.length === 1) {
@@ -224,26 +269,16 @@ export function VirtualTryOnPage() {
               <h2>2. Tu prenda</h2>
               {garments.length ? (
                 <>
-                  <label className="virtual-select">Selecciona una prenda
-                    <select value={garmentId} disabled={Boolean(busy)} onChange={(event) => { setGarmentId(event.target.value); setConsent(false); }}>
-                      <option value="">Elige una prenda</option>
-                      {garments.filter((garment) => !additionalGarmentIds.includes(garment.id) || garment.id === garmentId).map((garment) => <option key={garment.id} value={garment.id}>{garment.name} — {garment.color}</option>)}
-                    </select>
-                  </label>
+                  <PhotoGarmentPicker label="Selecciona una prenda" garments={garments.filter((garment) => !additionalGarments.some((item) => item.id === garment.id))} value={garmentId} disabled={Boolean(busy)} onChange={(id) => { setGarmentId(id); setConsent(false); }} />
                   {selected?.imageUrl && <img className="virtual-preview" src={selected.imageUrl} alt={`Fotografía de ${selected.name}`} />}
-                  {additionalGarmentIds.map((id, index) => {
+                  {additionalGarments.map(({ id, key }) => {
                     const selectedIds = photoGarmentIds.filter((selectedId) => selectedId !== id);
-                    return <div className="virtual-extra-garment" key={`extra-${index}`}>
-                      <label className="virtual-select">Otra prenda
-                        <select value={id} disabled={Boolean(busy)} onChange={(event) => { setAdditionalGarmentIds((items) => items.map((item, itemIndex) => itemIndex === index ? event.target.value : item)); setConsent(false); }}>
-                          <option value="">Elige una prenda</option>
-                          {garments.filter((garment) => !selectedIds.includes(garment.id)).map((garment) => <option key={garment.id} value={garment.id}>{garment.name} — {garment.color}</option>)}
-                        </select>
-                      </label>
-                      <button type="button" className="button-secondary" disabled={Boolean(busy)} aria-label="Quitar prenda" onClick={() => { setAdditionalGarmentIds((items) => items.filter((_, itemIndex) => itemIndex !== index)); setConsent(false); }}><X size={16} /></button>
+                    return <div className="virtual-extra-garment" key={key}>
+                      <PhotoGarmentPicker label="Otra prenda" garments={garments.filter((garment) => !selectedIds.includes(garment.id))} value={id} disabled={Boolean(busy)} onChange={(nextId) => { setAdditionalGarments((items) => items.map((item) => item.key === key ? { ...item, id: nextId } : item)); setConsent(false); }} />
+                      <button type="button" className="button-secondary" disabled={Boolean(busy)} aria-label="Quitar prenda" onClick={() => { setAdditionalGarments((items) => items.filter((item) => item.key !== key)); setConsent(false); }}><X size={16} /></button>
                     </div>;
                   })}
-                  {garmentId && photoGarmentIds.length < 6 && additionalGarmentIds.every(Boolean) && <button type="button" className="button-secondary virtual-add-garment" disabled={Boolean(busy)} onClick={() => { setAdditionalGarmentIds((items) => [...items, '']); setConsent(false); }}><Plus size={16} /> Añadir otra prenda</button>}
+                  {garmentId && photoGarmentIds.length < 6 && additionalGarments.every((item) => Boolean(item.id)) && <button type="button" className="button-secondary virtual-add-garment" disabled={Boolean(busy)} onClick={() => { const key = nextGarmentKey.current++; setAdditionalGarments((items) => [...items, { key, id: '' }]); setConsent(false); }}><Plus size={16} /> Añadir otra prenda</button>}
                 </>
               ) : <p>Añade una prenda con fotografía en <Link to="/armario">Mi armario</Link>.</p>}
             </section>
@@ -253,7 +288,7 @@ export function VirtualTryOnPage() {
             <p>Para generar esta simulación, MiArmario enviará tu fotografía personal y las prendas seleccionadas a Google Vertex AI. El modelo utilizado procesa las imágenes mediante un endpoint global, por lo que no se garantiza que el procesamiento se realice en España o dentro de la Unión Europea. La imagen generada es orientativa y no garantiza la talla ni el ajuste real.</p>
             <p>Cada intento puede generar costes. Una nueva simulación sustituirá el resultado guardado anterior.</p>
             <label className="virtual-checkbox"><input type="checkbox" checked={consent} disabled={Boolean(busy)} onChange={(event) => setConsent(event.target.checked)} /> Acepto el envío de mi fotografía y las prendas seleccionadas a Google Vertex AI para esta simulación.</label>
-            <button className="button-primary" disabled={Boolean(busy) || !photo || !garmentId || !photoGarmentIds.length || additionalGarmentIds.some((id) => !id) || !consent} onClick={generate}>
+            <button className="button-primary" disabled={Boolean(busy) || !photo || !garmentId || !photoGarmentIds.length || additionalGarments.some((item) => !item.id) || !consent} onClick={generate}>
               {busy === 'Generando simulación…' ? <span className="button-spinner" /> : <Sparkles size={17} />}
               {busy || 'Probar cómo me queda'}
             </button>

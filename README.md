@@ -91,6 +91,8 @@ región y el despliegue de la función.
 La sección permite guardar una fotografía personal de cuerpo entero, elegir una
 prenda con foto y solicitar una simulación orientativa. Antes de cada solicitud
 hay que aceptar expresamente el envío de ambas fotografías a Google Vertex AI.
+En **Mi fotografía**, selecciona una categoría para ver sus prendas con
+miniaturas; también puedes añadir hasta cinco prendas adicionales.
 El modelo `gemini-nano-banana-2.1` usa el endpoint global: no se garantiza que
 el procesamiento tenga lugar en España ni en la UE. Cada intento puede generar
 costes y el resultado no garantiza la talla ni el ajuste real.

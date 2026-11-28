@@ -84,6 +84,12 @@ h1, h2, h3, p { margin-top: 0; }
 .virtual-tab { flex: 1; min-height: 42px; padding: 8px 12px; border: 0; border-radius: 6px; background: transparent; color: #606774; font-weight: 600; cursor: pointer; }
 .virtual-tab-active { background: white; color: var(--navy); box-shadow: 0 1px 4px #17253d14; }
 .virtual-garment-picker { max-height: 360px; }
+.virtual-photo-picker { display: grid; min-width: 0; gap: 10px; }
+.virtual-picker-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; color: #606774; font-size: 13px; }
+.virtual-picker-summary .button-secondary { min-height: 32px; font-size: 12px; }
+.virtual-photo-picker .picker-empty { margin: 0; }
+.virtual-photo-picker .garment-picker-item:has(input:focus-visible) { outline: 2px solid var(--gold); outline-offset: 2px; }
+.virtual-photo-picker .garment-picker-item:has(input:disabled) { cursor: default; opacity: .6; }
 .virtual-extra-garment { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; margin-top: 10px; }
 .virtual-add-garment { margin-top: 10px; }
 .virtual-preview { width: auto; max-width: 100%; max-height: 440px; margin: 15px 0; border-radius: 8px; object-fit: contain; }
